@@ -1,14 +1,14 @@
 import socket
 import sqlite3
-
+from numpy import random
 from Utils import *
 
 localIP = "127.0.0.1"
 localPort = 20001
 
 max_amount = 2000
-
 con = sqlite3.connect("Hallo.db")
+sessions = []
 
 
 def error(s):
@@ -32,7 +32,7 @@ def init_database():
     con.commit()
 
 
-#init_database()
+# init_database()
 
 
 def get_customer_id(username, password):
@@ -60,12 +60,7 @@ def query_balance(customer_id):
         return answer[0]
 
 
-UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-# Bind to address and ip
-UDPServerSocket.bind((localIP, localPort))
-
-while True:
-    paket, src = UDPServerSocket.recvfrom(1024)
+def login(paket, src):
     length_username = int_from_bytes(paket[0:4])
     end_of_username = 4 + length_username
     username = paket[4:end_of_username].decode(UTF8STR)
@@ -78,6 +73,33 @@ while True:
     if customer_id is None:
         print("Fehllogin: Nutzer: " + username)
     else:
-        print("Kunde: " + username + " hat Kontostand abgefragt")
-        balance = query_balance(customer_id)
-        UDPServerSocket.sendto(int_to_bytes(balance), src)
+        print(username + " eingeloggt")
+        session = random.bytes(16)
+        sessions.append((session, customer_id, src))
+        UDPServerSocket.sendto(session, src)
+
+
+def get_customer_id_from_session(session_id, src):
+    for s in sessions:
+        if s[0] == session_id and src == s[2]:
+            return s[1]
+    return None
+
+
+UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+# Bind to address and ip
+UDPServerSocket.bind((localIP, localPort))
+
+while True:
+    paket, src = UDPServerSocket.recvfrom(1024)
+    command = int_from_bytes(paket[0:4])
+
+    if command == LOGIN_COMMAND:
+        login(paket[4:], src)
+    elif command == SHOW_BALANCE_COMMAND:
+        customer_id = get_customer_id_from_session(paket[4:20], src)
+        if customer_id is not None:
+            balance = query_balance(customer_id)
+            UDPServerSocket.sendto(int_to_bytes(balance), src)
+        else:
+            error("No customer id to session")
