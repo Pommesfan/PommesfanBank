@@ -1,12 +1,11 @@
 import socket
-import sqlite3
 from numpy import random
+
+from DB_Interface import DB_Interface
 from Utils import *
 
 localIP = "127.0.0.1"
 localPort = 20001
-
-con = sqlite3.connect("Hallo.db")
 
 
 class Session:
@@ -17,34 +16,18 @@ class Session:
 
 
 sessions = []
+db_interface = DB_Interface("Hallo.db")
+db_interface.init_database()
 
 
 def error(s):
-    con.close()
+    db_interface.close()
     print(s)
     exit(1)
 
 
-def init_database():
-    con.execute("create table customer(customer_id, customer_name, password, balance)")
-    con.commit()
-
-    customers = [
-        ("45321695", "AAAA", "hallo", 6598),
-        ("15369754", "BBBB", "hi", 9832),
-        ("12498625", "CCCC", "ups", 4682),
-        ("49871283", "DDDD", "jesses", 361)
-    ]
-    for c in customers:
-        con.execute("insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "', " + str(c[3]) + ")")
-    con.commit()
-
-
-# init_database()
-
-
 def get_customer_id(username, password):
-    answer = query_first_item(con, "select * from customer where customer_name = '" + username + "'")
+    answer = db_interface.query_first_item("select * from customer where customer_name = '" + username + "'")
 
     if answer is None or answer[2] != password:
         return None
@@ -53,7 +36,7 @@ def get_customer_id(username, password):
 
 
 def query_balance(customer_id):
-    answer = query_first_item(con, "select balance from customer where customer_id = '" + customer_id + "'")
+    answer = db_interface.query_first_item("select balance from customer where customer_id = '" + customer_id + "'")
     if answer is None:
         error("Abfrage mit nicht existierender Kunden-ID")
     else:
@@ -92,7 +75,7 @@ UDPServerSocket.bind((localIP, localPort))
 
 
 def transfer(target_customer_id, customer_id, amount):
-    if not query_first_item(con, "select * from customer where customer_id = '" + target_customer_id + "'"):
+    if not db_interface.query_first_item("select * from customer where customer_id = '" + target_customer_id + "'"):
         return
 
     balance_transmitter = query_balance(customer_id)
@@ -101,11 +84,7 @@ def transfer(target_customer_id, customer_id, amount):
         return
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    con.execute("update customer set balance = " + str(new_balance_transmitter)
-                + " where customer_id = '" + str(customer_id) + "';")
-    con.execute("update customer set balance = " + str(new_balance_receiver)
-                + " where customer_id = '" + str(target_customer_id) + "';")
-    con.commit()
+    db_interface.transfer(customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter)
 
 
 while True:

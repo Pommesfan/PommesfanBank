@@ -11,12 +11,3 @@ def int_to_bytes(i):
 
 def int_from_bytes(i):
     return int.from_bytes(i, "big")
-
-
-def query_first_item(con, sql):
-    response = con.execute(sql)
-    answer = None
-    for r in response:
-        answer = r
-        break
-    return answer
