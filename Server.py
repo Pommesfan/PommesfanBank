@@ -6,8 +6,16 @@ from Utils import *
 localIP = "127.0.0.1"
 localPort = 20001
 
-max_amount = 2000
 con = sqlite3.connect("Hallo.db")
+
+
+class Session:
+    def __init__(self, session_id, customer_id, ip_and_port):
+        self.session_id = session_id
+        self.customer_id = customer_id
+        self.ip_and_port = ip_and_port
+
+
 sessions = []
 
 
@@ -74,15 +82,15 @@ def login(paket, src):
         print("Fehllogin: Nutzer: " + username)
     else:
         print(username + " eingeloggt")
-        session = random.bytes(16)
-        sessions.append((session, customer_id, src))
-        UDPServerSocket.sendto(session, src)
+        session_id = random.bytes(16)
+        sessions.append(Session(session_id, customer_id, src))
+        UDPServerSocket.sendto(session_id, src)
 
 
 def get_customer_id_from_session(session_id, src):
     for s in sessions:
-        if s[0] == session_id and src == s[2]:
-            return s[1]
+        if s.session_id == session_id and s.ip_and_port == src:
+            return s.customer_id
     return None
 
 
