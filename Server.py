@@ -17,7 +17,7 @@ class Session:
 
 sessions = []
 db_interface = DB_Interface("Hallo.db")
-db_interface.init_database()
+# db_interface.init_database()
 
 
 def error(s):
