@@ -2,6 +2,7 @@ UTF8STR = "utf8"
 
 LOGIN_COMMAND = 0
 SHOW_BALANCE_COMMAND = 1
+TRANSFER_COMMAND = 2
 
 
 def int_to_bytes(i):
@@ -10,3 +11,12 @@ def int_to_bytes(i):
 
 def int_from_bytes(i):
     return int.from_bytes(i, "big")
+
+
+def query_first_item(con, sql):
+    response = con.execute(sql)
+    answer = None
+    for r in response:
+        answer = r
+        break
+    return answer
