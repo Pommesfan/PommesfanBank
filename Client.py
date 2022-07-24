@@ -18,10 +18,11 @@ UDPClientSocket.sendto(paket, dst)
 session = UDPClientSocket.recv(16)
 
 while True:
+    banking_command_b = int_to_bytes(BANKING_COMMAND)
     print("Komandos: 1:abfragen, 2:überweisen")
     cmd = int(input())
     if cmd == 1:
-        UDPClientSocket.sendto(int_to_bytes(SHOW_BALANCE_COMMAND) + session, dst)
+        UDPClientSocket.sendto(banking_command_b + int_to_bytes(SHOW_BALANCE_COMMAND) + session, dst)
         amount_b = UDPClientSocket.recv(4)
         print("Kontostand: " + str(int_from_bytes(amount_b)))
     elif cmd == 2:
@@ -29,5 +30,5 @@ while True:
         target_customer_id = input().encode(UTF8STR)
         print("Betrag:")
         amount = int_to_bytes(int(input()))
-        UDPClientSocket.sendto(int_to_bytes(TRANSFER_COMMAND) + session + target_customer_id + amount, dst)
+        UDPClientSocket.sendto(banking_command_b + int_to_bytes(TRANSFER_COMMAND) + session + target_customer_id + amount, dst)
 

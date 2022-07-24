@@ -93,15 +93,16 @@ while True:
 
     if command == LOGIN_COMMAND:
         login(paket[4:], src)
-    else:
-        customer_id = get_customer_id_from_session(paket[4:20], src)
-        if command == SHOW_BALANCE_COMMAND:
+    elif command == BANKING_COMMAND:
+        banking_command = int_from_bytes(paket[4:8])
+        customer_id = get_customer_id_from_session(paket[8:24], src)
+        if banking_command == SHOW_BALANCE_COMMAND:
             if customer_id is not None:
                 balance = query_balance(customer_id)
                 UDPServerSocket.sendto(int_to_bytes(balance), src)
             else:
                 error("No customer id to session")
-        elif command == TRANSFER_COMMAND:
-            target_customer_id = paket[20:28].decode(UTF8STR)
-            amount = int_from_bytes(paket[28:32])
+        elif banking_command == TRANSFER_COMMAND:
+            target_customer_id = paket[24:32].decode(UTF8STR)
+            amount = int_from_bytes(paket[32:36])
             transfer(target_customer_id, customer_id, amount)
