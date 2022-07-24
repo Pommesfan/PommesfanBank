@@ -1,3 +1,5 @@
+from numpy import random
+
 UTF8STR = "utf8"
 
 LOGIN_COMMAND = 0
@@ -12,3 +14,16 @@ def int_to_bytes(i):
 
 def int_from_bytes(i):
     return int.from_bytes(i, "big")
+
+
+def number_fill_aes_block_to_16x(password_length):
+    rest = password_length % 16
+    if rest == 0:
+        return 0
+    else:
+        return 16 - rest
+
+
+def hashcode(v):
+    from Crypto.Hash import SHA256
+    return SHA256.new(v.encode(UTF8STR)).digest()

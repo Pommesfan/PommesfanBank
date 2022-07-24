@@ -1,6 +1,5 @@
 import socket
-from numpy import random
-
+from Crypto.Cipher import AES
 from DB_Interface import DB_Interface
 from Utils import *
 
@@ -26,13 +25,26 @@ def error(s):
     exit(1)
 
 
-def get_customer_id(username, password):
+def decrypt_password(password_cipher, key):
+    aes = AES.new(key, AES.MODE_CBC, 'This is an IV456')
+    return aes.decrypt(password_cipher)
+
+
+def get_customer_id(username, input_password_cipher, length_of_password):
     answer = db_interface.query_first_item("select * from customer where customer_name = '" + username + "'")
 
-    if answer is None or answer[2] != password:
+    if answer is None:
         return None
-    else:
+
+    user_password = answer[2]
+    user_password_b = user_password.encode(UTF8STR)
+    key = hashcode(user_password)
+    input_password_b = decrypt_password(input_password_cipher, key)
+
+    if user_password_b == input_password_b[:length_of_password]:
         return answer[0]
+    else:
+        return None
 
 
 def query_balance(customer_id):
@@ -50,9 +62,9 @@ def login(paket, src):
     start_of_password = end_of_username + 4
     length_of_password = int_from_bytes(paket[end_of_username:start_of_password])
     end_of_password = start_of_password + length_of_password
-    password = paket[start_of_password:end_of_password].decode(UTF8STR)
+    password_cipher = paket[start_of_password:end_of_password + number_fill_aes_block_to_16x(length_of_password)]
 
-    customer_id = get_customer_id(username, password)
+    customer_id = get_customer_id(username, password_cipher, length_of_password)
     if customer_id is None:
         print("Fehllogin: Nutzer: " + username)
     else:

@@ -1,4 +1,5 @@
 import socket
+from Crypto.Cipher import AES
 from Utils import *
 
 serverIP = "127.0.0.1"
@@ -12,8 +13,21 @@ password = input()
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username)) + username.encode(UTF8STR)\
-        + int_to_bytes(len(password)) + password.encode(UTF8STR)
+
+def encrypt_password(password):
+    password_hash = hashcode(password)
+    password_b = password.encode(UTF8STR)
+    password_length = len(password)
+
+    obj1 = AES.new(password_hash, AES.MODE_CBC, 'This is an IV456')
+
+    return obj1.encrypt(password_b + random.bytes(number_fill_aes_block_to_16x(password_length)))
+
+
+password_cipher = encrypt_password(password)
+
+paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username)) + username.encode(UTF8STR) \
+        + int_to_bytes(len(password)) + password_cipher
 UDPClientSocket.sendto(paket, dst)
 session = UDPClientSocket.recv(16)
 
@@ -30,5 +44,5 @@ while True:
         target_customer_id = input().encode(UTF8STR)
         print("Betrag:")
         amount = int_to_bytes(int(input()))
-        UDPClientSocket.sendto(banking_command_b + int_to_bytes(TRANSFER_COMMAND) + session + target_customer_id + amount, dst)
-
+        UDPClientSocket.sendto(
+            banking_command_b + int_to_bytes(TRANSFER_COMMAND) + session + target_customer_id + amount, dst)
