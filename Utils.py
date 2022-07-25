@@ -1,3 +1,4 @@
+from Crypto.Cipher import AES
 from numpy import random
 
 UTF8STR = "utf8"
@@ -27,3 +28,13 @@ def number_fill_aes_block_to_16x(password_length):
 def hashcode(v):
     from Crypto.Hash import SHA256
     return SHA256.new(v.encode(UTF8STR)).digest()
+
+
+def encrypt(plain, key):
+    obj1 = AES.new(key, AES.MODE_CBC, 'This is an IV456')
+    return obj1.encrypt(plain + random.bytes(number_fill_aes_block_to_16x(len(plain))))
+
+
+def decrypt(cipher, key):
+    aes = AES.new(key, AES.MODE_CBC, 'This is an IV456')
+    return aes.decrypt(cipher)
