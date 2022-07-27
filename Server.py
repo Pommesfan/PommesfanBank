@@ -101,24 +101,26 @@ def transfer(target_customer_id, customer_id, amount):
 
 while True:
     paket, src = UDPServerSocket.recvfrom(1024)
-    command = int_from_bytes(paket[0:4])
-
-    if command == LOGIN_COMMAND:
-        login(paket[4:], src)
-    elif command == BANKING_COMMAND:
-        session = get_session(paket[4:20], src)
-        customer_id = session.customer_id
-        session_key = session.session_key
-        paket = decrypt(paket[20:], session_key)
-        banking_command = int_from_bytes(paket[0:4])
-        if banking_command == SHOW_BALANCE_COMMAND:
-            if customer_id is not None:
-                balance = query_balance(customer_id)
-                paket = encrypt(int_to_bytes(balance), session_key)
-                UDPServerSocket.sendto(paket, src)
-            else:
-                error("No customer id to session")
-        elif banking_command == TRANSFER_COMMAND:
-            target_customer_id = paket[4:12].decode(UTF8STR)
-            amount = int_from_bytes(paket[12:16])
-            transfer(target_customer_id, customer_id, amount)
+    try:
+        command = int_from_bytes(paket[0:4])
+        if command == LOGIN_COMMAND:
+            login(paket[4:], src)
+        elif command == BANKING_COMMAND:
+            session = get_session(paket[4:20], src)
+            customer_id = session.customer_id
+            session_key = session.session_key
+            paket = decrypt(paket[20:], session_key)
+            banking_command = int_from_bytes(paket[0:4])
+            if banking_command == SHOW_BALANCE_COMMAND:
+                if customer_id is not None:
+                    balance = query_balance(customer_id)
+                    paket = encrypt(int_to_bytes(balance), session_key)
+                    UDPServerSocket.sendto(paket, src)
+                else:
+                    error("No customer id to session")
+            elif banking_command == TRANSFER_COMMAND:
+                target_customer_id = paket[4:12].decode(UTF8STR)
+                amount = int_from_bytes(paket[12:16])
+                transfer(target_customer_id, customer_id, amount)
+    except:
+        print("Error for serving client")
