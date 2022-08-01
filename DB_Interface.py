@@ -15,7 +15,9 @@ class DB_Interface:
                          "foreign key(customer_to) references customer(customer_id),"
                          "foreign key(customer_to) references customer(customer_id));")
         self.con.commit()
+        self.add_example_customers()
 
+    def add_example_customers(self):
         customers = [
             ("45321695", "AAAA", "hallo", 6598),
             ("15369754", "BBBB", "hi", 9832),

@@ -92,7 +92,7 @@ def transfer(target_customer_id, customer_id, amount, reference):
 
     balance_transmitter = query_balance(customer_id)
     balance_receiver = query_balance(target_customer_id)
-    if amount > balance_receiver:
+    if amount > balance_transmitter:
         return
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
