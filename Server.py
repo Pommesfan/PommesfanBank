@@ -2,35 +2,12 @@ import socket
 import traceback
 from DB_Interface import DB_Interface
 from Utils import *
+from Sessions import *
 
 localIP = "127.0.0.1"
 localPort = 20001
 
-
-def get_session_from_id(session_id, src):
-    for s in sessions:
-        if s.session_id == session_id and s.ip_and_port == src:
-            return s
-    return None
-
-
-def remove_session(session_id):
-    for i in range(len(sessions)):
-        if sessions[i].session_id == session_id:
-            sessions.pop(i)
-            return
-    error("remove session: session_id not found")
-
-
-class Session:
-    def __init__(self, session_id, session_key, customer_id, ip_and_port):
-        self.session_id = session_id
-        self.session_key = session_key
-        self.customer_id = customer_id
-        self.ip_and_port = ip_and_port
-
-
-sessions = []
+session_list = SessionList()
 db_interface = DB_Interface("Hallo.db")
 # db_interface.init_database()
 
@@ -85,7 +62,7 @@ def login(paket, src):
         session_id = random.bytes(16)
         session_key = random.bytes(32)
         session_key_cipher = encrypt(session_key, key)
-        sessions.append(Session(session_id, session_key, customer_id, src))
+        session_list.add(Session(session_id, session_key, customer_id, src))
         UDPServerSocket.sendto(session_id + session_key_cipher, src)
 
 
@@ -121,7 +98,7 @@ while True:
         if command == LOGIN_COMMAND:
             login(paket[4:], src)
         elif command == BANKING_COMMAND:
-            session = get_session_from_id(paket[4:20], src)
+            session = session_list.get_session_from_id(paket[4:20], src)
             # session was removed due to logout
             if session is None:
                 continue
@@ -131,8 +108,9 @@ while True:
             banking_command = int_from_bytes(paket[0:4])
             if banking_command == EXIT_COMMAND:
                 name = db_interface.query_first_item("select customer_name from customer where customer_id = '" + session.customer_id +"'")
-                remove_session(session.session_id)
-                print(name[0] + " exited")
+                if session_list.remove_session(session.session_id) == -1:
+                    error("remove session: session_id not found")
+                print(name[0] + " ausgeloggt")
             elif banking_command == SHOW_BALANCE_COMMAND:
                 if customer_id is not None:
                     balance = query_balance(customer_id)

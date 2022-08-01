@@ -15,7 +15,6 @@ UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 def encrypt_password(password, password_hash):
     password_b = password.encode(UTF8STR)
-    password_length = len(password)
     return encrypt(password_b, password_hash)
 
 
