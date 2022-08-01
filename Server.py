@@ -1,5 +1,5 @@
 import socket
-from numpy import random
+import traceback
 from DB_Interface import DB_Interface
 from Utils import *
 
@@ -86,7 +86,7 @@ UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 
 
-def transfer(target_customer_id, customer_id, amount):
+def transfer(target_customer_id, customer_id, amount, reference):
     if not db_interface.query_first_item("select * from customer where customer_id = '" + target_customer_id + "'"):
         return
 
@@ -96,7 +96,8 @@ def transfer(target_customer_id, customer_id, amount):
         return
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter)
+    db_interface.transfer(customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter, amount,
+                          reference)
 
 
 while True:
@@ -121,6 +122,8 @@ while True:
             elif banking_command == TRANSFER_COMMAND:
                 target_customer_id = paket[4:12].decode(UTF8STR)
                 amount = int_from_bytes(paket[12:16])
-                transfer(target_customer_id, customer_id, amount)
+                reference_length = int_from_bytes(paket[16:20])
+                reference = paket[20:20 + reference_length].decode(UTF8STR)
+                transfer(target_customer_id, customer_id, amount, reference)
     except:
-        print("Error for serving client")
+        traceback.print_exc()

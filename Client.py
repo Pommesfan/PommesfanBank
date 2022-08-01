@@ -1,5 +1,4 @@
 import socket
-from numpy import random
 from Utils import *
 
 serverIP = "127.0.0.1"
@@ -49,6 +48,10 @@ while True:
         target_customer_id = input().encode(UTF8STR)
         print("Betrag:")
         amount = int_to_bytes(int(input()))
-        cipher_paket = encrypt(int_to_bytes(TRANSFER_COMMAND) + target_customer_id + amount, session_key)
+        print("Verwendungszweck:")
+        reference = input()
+        paket = int_to_bytes(TRANSFER_COMMAND) + target_customer_id + amount + int_to_bytes(len(reference))\
+            + reference.encode(UTF8STR)
+        cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)

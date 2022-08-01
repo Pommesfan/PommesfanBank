@@ -9,7 +9,11 @@ class DB_Interface:
         self.con.close()
 
     def init_database(self):
-        self.con.execute("create table customer(customer_id, customer_name, password, balance)")
+        self.con.execute("create table customer(customer_id primary key, customer_name, password, balance);")
+        self.con.execute("create table transfer(transfer_id integer primary key autoincrement, customer_from, "
+                         "customer_to, amount, date, reference, new_balance_transmitter, new_balance_receiver,"
+                         "foreign key(customer_to) references customer(customer_id),"
+                         "foreign key(customer_to) references customer(customer_id));")
         self.con.commit()
 
         customers = [
@@ -31,9 +35,13 @@ class DB_Interface:
             break
         return answer
 
-    def transfer(self, customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter):
+    def transfer(self, customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter,
+                 amount, reference):
         self.con.execute("update customer set balance = " + str(new_balance_transmitter)
                          + " where customer_id = '" + str(customer_id) + "';")
         self.con.execute("update customer set balance = " + str(new_balance_receiver)
                          + " where customer_id = '" + str(target_customer_id) + "';")
+        self.con.execute("insert into transfer values(NULL, '" + customer_id + "', '" + target_customer_id + "', " +
+                         str(amount) + ", (select datetime('now', 'localtime')), '" + reference + "', " +
+                         str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
         self.con.commit()
