@@ -47,3 +47,13 @@ class DB_Interface:
                          str(amount) + ", (select datetime('now', 'localtime')), '" + reference + "', " +
                          str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
         self.con.commit()
+
+    def query_turnover(self, customer_id):
+        statement = "select transfer_id, customer_to, amount * -1, date, reference from transfer where customer_from " \
+                    "= '" + customer_id + "' union select transfer_id, customer_from, amount, date, reference from " \
+                                          "transfer where customer_to = '" + customer_id + "'; "
+        res = self.con.execute(statement)
+        l = []
+        for x in res:
+            l.append(x)
+        return l

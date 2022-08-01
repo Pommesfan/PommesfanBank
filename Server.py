@@ -100,6 +100,12 @@ def transfer(target_customer_id, customer_id, amount, reference):
                           reference)
 
 
+def resume_turnover(customer_id):
+    res = db_interface.query_turnover(customer_id)
+    for x in res:
+        print(x)
+
+
 while True:
     paket, src = UDPServerSocket.recvfrom(1024)
     try:
@@ -125,5 +131,7 @@ while True:
                 reference_length = int_from_bytes(paket[16:20])
                 reference = paket[20:20 + reference_length].decode(UTF8STR)
                 transfer(target_customer_id, customer_id, amount, reference)
+            elif banking_command == SEE_TURNOVER:
+                resume_turnover(customer_id)
     except:
         traceback.print_exc()
