@@ -33,9 +33,13 @@ session_key = decrypt(paket[16:48], password_hash)
 
 while True:
     banking_command_b = int_to_bytes(BANKING_COMMAND)
-    print("Komandos: 1:abfragen, 2:überweisen, 3:Umsatzübersicht")
+    print("Komandos: 1:Ausloggen, 2:abfragen, 3:überweisen, 4:Umsatzübersicht")
     cmd = int(input())
     if cmd == 1:
+        cipher_paket = encrypt(int_to_bytes(EXIT_COMMAND), session_key)
+        UDPClientSocket.sendto(banking_command_b + session_id + cipher_paket, dst)
+        break
+    elif cmd == 2:
         paket_to_encrypt = int_to_bytes(SHOW_BALANCE_COMMAND)
         cipher_paket = encrypt(paket_to_encrypt, session_key)
         paket = banking_command_b + session_id + cipher_paket
@@ -43,7 +47,7 @@ while True:
         paket = UDPClientSocket.recv(16)
         amount_b = decrypt(paket, session_key)[0:4]
         print("Kontostand: " + str(int_from_bytes(amount_b)))
-    elif cmd == 2:
+    elif cmd == 3:
         print("Kundennummer Empfänger:")
         target_customer_id = input().encode(UTF8STR)
         print("Betrag:")
@@ -55,7 +59,7 @@ while True:
         cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)
-    elif cmd == 3:
+    elif cmd == 4:
         cipher_paket = encrypt(int_to_bytes(SEE_TURNOVER), session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)

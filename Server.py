@@ -7,6 +7,21 @@ localIP = "127.0.0.1"
 localPort = 20001
 
 
+def get_session_from_id(session_id, src):
+    for s in sessions:
+        if s.session_id == session_id and s.ip_and_port == src:
+            return s
+    return None
+
+
+def remove_session(session_id):
+    for i in range(len(sessions)):
+        if sessions[i].session_id == session_id:
+            sessions.pop(i)
+            return
+    error("remove session: session_id not found")
+
+
 class Session:
     def __init__(self, session_id, session_key, customer_id, ip_and_port):
         self.session_id = session_id
@@ -74,13 +89,6 @@ def login(paket, src):
         UDPServerSocket.sendto(session_id + session_key_cipher, src)
 
 
-def get_session(session_id, src):
-    for s in sessions:
-        if s.session_id == session_id and s.ip_and_port == src:
-            return s
-    return None
-
-
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 # Bind to address and ip
 UDPServerSocket.bind((localIP, localPort))
@@ -113,12 +121,19 @@ while True:
         if command == LOGIN_COMMAND:
             login(paket[4:], src)
         elif command == BANKING_COMMAND:
-            session = get_session(paket[4:20], src)
+            session = get_session_from_id(paket[4:20], src)
+            # session was removed due to logout
+            if session is None:
+                continue
             customer_id = session.customer_id
             session_key = session.session_key
             paket = decrypt(paket[20:], session_key)
             banking_command = int_from_bytes(paket[0:4])
-            if banking_command == SHOW_BALANCE_COMMAND:
+            if banking_command == EXIT_COMMAND:
+                name = db_interface.query_first_item("select customer_name from customer where customer_id = '" + session.customer_id +"'")
+                remove_session(session.session_id)
+                print(name[0] + " exited")
+            elif banking_command == SHOW_BALANCE_COMMAND:
                 if customer_id is not None:
                     balance = query_balance(customer_id)
                     paket = encrypt(int_to_bytes(balance), session_key)
