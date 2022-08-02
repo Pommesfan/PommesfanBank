@@ -30,6 +30,40 @@ paket = UDPClientSocket.recv(48)
 session_id = paket[0:16]
 session_key = decrypt(paket[16:48], password_hash)
 
+
+def receive_turnover():
+    PAKET_LEN = 1480
+    initial_paket = decrypt(UDPClientSocket.recv(16), session_key)
+    number_of_full_pakets = int_from_bytes(initial_paket[0:4])
+    size_of_last_paket = int_from_bytes(initial_paket[4:8])
+    b = b''
+    for i in range(number_of_full_pakets):
+        paket = UDPClientSocket.recv(PAKET_LEN)
+        b += (decrypt(paket, session_key))
+    if size_of_last_paket != 0:
+        paket = UDPClientSocket.recv(size_of_last_paket + number_fill_aes_block_to_16x(size_of_last_paket))
+        b += (decrypt(paket, session_key))
+    return b
+
+
+def print_turnover(turnover_list_b):
+    counter = 0
+    while turnover_list_b[counter:counter + 4] != TERMINATION:
+        customer_id = turnover_list_b[counter:counter+8].decode(UTF8STR)
+        counter+=8
+        amount = int_from_bytes(turnover_list_b[counter:counter+4])
+        counter+=4
+        time_stamp = turnover_list_b[counter: counter + 19].decode(UTF8STR)
+        counter += 19
+        reference_len = int_from_bytes(turnover_list_b[counter:counter+4])
+        counter += 4
+        reference = turnover_list_b[counter:counter + reference_len].decode(UTF8STR)
+        counter += reference_len
+        print("Kundennummer: " + customer_id + "; Wert: " + str(amount) + "; Zeitpunkt: " + time_stamp +
+              "; Verwendungszweck: " + reference)
+    print()
+
+
 while True:
     banking_command_b = int_to_bytes(BANKING_COMMAND)
     print("Komandos: 1:Ausloggen, 2:abfragen, 3:überweisen, 4:Umsatzübersicht")
@@ -62,3 +96,5 @@ while True:
         cipher_paket = encrypt(int_to_bytes(SEE_TURNOVER), session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)
+        turnover_list_b = receive_turnover()
+        print_turnover(turnover_list_b)

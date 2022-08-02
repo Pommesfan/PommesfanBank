@@ -1,3 +1,4 @@
+import numpy
 import socket
 import traceback
 from DB_Interface import DB_Interface
@@ -85,10 +86,34 @@ def transfer(target_customer_id, customer_id, amount, reference):
                           reference)
 
 
-def resume_turnover(customer_id):
+def resume_turnover(customer_id, src, session_key):
+    PAKET_LEN = 1480
     res = db_interface.query_turnover(customer_id)
+    # make large bytes array of all information
+    b = b''
     for x in res:
-        print(x)
+        reference = x[3]
+        customer_id_b = x[0].encode(UTF8STR)
+        amount_b = int_to_bytes(x[1])
+        timestamp_b = x[2].encode(UTF8STR)
+        reference_length_b = int_to_bytes(len(reference))
+        reference_b = reference.encode(UTF8STR)
+        b += (customer_id_b + amount_b + timestamp_b + reference_length_b + reference_b)
+    b += TERMINATION
+
+    # split array into pakets and send
+    number_of_full_pakets = int(len(b) / PAKET_LEN)
+    size_of_last_paket = len(b) % PAKET_LEN
+    initial_paket = int_to_bytes(number_of_full_pakets) + int_to_bytes(size_of_last_paket)
+    initial_paket_cipher = encrypt(initial_paket, session_key)
+    UDPServerSocket.sendto(initial_paket_cipher, src)
+    for i in range(number_of_full_pakets):
+        paket = b[i * PAKET_LEN: (i+1) * PAKET_LEN]
+        UDPServerSocket.sendto(encrypt(paket, session_key), src)
+
+    last_paket = b[number_of_full_pakets * PAKET_LEN:]
+    if len(last_paket) != 0:
+        UDPServerSocket.sendto(encrypt(last_paket, session_key), src)
 
 
 while True:
@@ -107,7 +132,8 @@ while True:
             paket = decrypt(paket[20:], session_key)
             banking_command = int_from_bytes(paket[0:4])
             if banking_command == EXIT_COMMAND:
-                name = db_interface.query_first_item("select customer_name from customer where customer_id = '" + session.customer_id +"'")
+                name = db_interface.query_first_item(
+                    "select customer_name from customer where customer_id = '" + session.customer_id + "'")
                 if session_list.remove_session(session.session_id) == -1:
                     error("remove session: session_id not found")
                 print(name[0] + " ausgeloggt")
@@ -125,6 +151,6 @@ while True:
                 reference = paket[20:20 + reference_length].decode(UTF8STR)
                 transfer(target_customer_id, customer_id, amount, reference)
             elif banking_command == SEE_TURNOVER:
-                resume_turnover(customer_id)
+                resume_turnover(customer_id, src, session_key)
     except:
         traceback.print_exc()

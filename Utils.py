@@ -12,11 +12,11 @@ SEE_TURNOVER = 5
 
 
 def int_to_bytes(i):
-    return int.to_bytes(i, 4, "big")
+    return int.to_bytes(i, 4, "big", signed=True)
 
 
 def int_from_bytes(i):
-    return int.from_bytes(i, "big")
+    return int.from_bytes(i, "big", signed=True)
 
 
 def number_fill_aes_block_to_16x(password_length):
@@ -40,3 +40,6 @@ def encrypt(plain, key):
 def decrypt(cipher, key):
     aes = AES.new(key, AES.MODE_CBC, 'This is an IV456')
     return aes.decrypt(cipher)
+
+
+TERMINATION = int_to_bytes(2147483647)
