@@ -102,18 +102,10 @@ def resume_turnover(customer_id, src, session_key):
     b += TERMINATION
 
     # split array into pakets and send
-    number_of_full_pakets = int(len(b) / PAKET_LEN)
-    size_of_last_paket = len(b) % PAKET_LEN
-    initial_paket = int_to_bytes(number_of_full_pakets) + int_to_bytes(size_of_last_paket)
-    initial_paket_cipher = encrypt(initial_paket, session_key)
-    UDPServerSocket.sendto(initial_paket_cipher, src)
-    for i in range(number_of_full_pakets):
-        paket = b[i * PAKET_LEN: (i+1) * PAKET_LEN]
-        UDPServerSocket.sendto(encrypt(paket, session_key), src)
+    def send_function(single_paket):
+        UDPServerSocket.sendto(encrypt(single_paket, session_key), src)
 
-    last_paket = b[number_of_full_pakets * PAKET_LEN:]
-    if len(last_paket) != 0:
-        UDPServerSocket.sendto(encrypt(last_paket, session_key), src)
+    split_pakets(b, send_function, PAKET_LEN)
 
 
 while True:
