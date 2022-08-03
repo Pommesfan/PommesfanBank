@@ -48,17 +48,20 @@ def receive_turnover():
 
 def print_turnover(turnover_list_b):
     counter = 0
+
+    def get_slice(length):
+        nonlocal counter
+        start = counter
+        end = start + length
+        counter = length
+        return turnover_list_b[start:end]
+
     while turnover_list_b[counter:counter + 4] != TERMINATION:
-        customer_id = turnover_list_b[counter:counter+8].decode(UTF8STR)
-        counter+=8
-        amount = int_from_bytes(turnover_list_b[counter:counter+4])
-        counter+=4
-        time_stamp = turnover_list_b[counter: counter + 19].decode(UTF8STR)
-        counter += 19
-        reference_len = int_from_bytes(turnover_list_b[counter:counter+4])
-        counter += 4
-        reference = turnover_list_b[counter:counter + reference_len].decode(UTF8STR)
-        counter += reference_len
+        customer_id = get_slice(8).decode(UTF8STR)
+        amount = int_from_bytes(get_slice(4))
+        time_stamp = get_slice(19).decode(UTF8STR)
+        reference_len = int_from_bytes(get_slice(4))
+        reference = get_slice(reference_len).decode(UTF8STR)
         print("Kundennummer: " + customer_id + "; Wert: " + str(amount) + "; Zeitpunkt: " + time_stamp +
               "; Verwendungszweck: " + reference)
     print()
