@@ -96,8 +96,8 @@ def resume_turnover(customer_id, src, session_key):
         customer_id_b = x[0].encode(UTF8STR)
         amount_b = int_to_bytes(x[1])
         timestamp_b = x[2].encode(UTF8STR)
-        reference_length_b = int_to_bytes(len(reference))
         reference_b = reference.encode(UTF8STR)
+        reference_length_b = int_to_bytes(len(reference_b))
         b += (customer_id_b + amount_b + timestamp_b + reference_length_b + reference_b)
     b += TERMINATION
 
