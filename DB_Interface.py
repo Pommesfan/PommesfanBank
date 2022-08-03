@@ -65,4 +65,4 @@ class DB_Interface:
         return self.query_first_item("select balance from customer where customer_id = '" + customer_id + "'")
 
     def query_customer_name(self, customer_id):
-        self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
+        return self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
