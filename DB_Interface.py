@@ -50,7 +50,7 @@ class DB_Interface:
 
     def query_turnover(self, customer_id):
         statement = "select customer_to, amount * -1, date, reference from transfer where customer_from " \
-                    "= '" + customer_id + "' union select customer_from, amount, date, reference from " \
+                    "= '" + customer_id + "' union all select customer_from, amount, date, reference from " \
                                           "transfer where customer_to = '" + customer_id + "' order by date desc; "
         res = self.con.execute(statement)
         return res

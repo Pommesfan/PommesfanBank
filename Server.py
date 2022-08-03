@@ -87,7 +87,7 @@ def transfer(target_customer_id, customer_id, amount, reference):
 
 
 def resume_turnover(customer_id, src, session_key):
-    PAKET_LEN = 1480
+    PAKET_LEN = 1472
     res = db_interface.query_turnover(customer_id)
     # make large bytes array of all information
     b = b''

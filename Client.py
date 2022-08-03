@@ -32,7 +32,7 @@ session_key = decrypt(paket[16:48], password_hash)
 
 
 def receive_turnover():
-    PAKET_LEN = 1480
+    PAKET_LEN = 1472
     initial_paket = decrypt(UDPClientSocket.recv(16), session_key)
     number_of_full_pakets = int_from_bytes(initial_paket[0:4])
     size_of_last_paket = int_from_bytes(initial_paket[4:8])
