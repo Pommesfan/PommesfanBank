@@ -20,7 +20,7 @@ def error(s):
 
 
 def get_customer_id(username, input_password_cipher, length_of_password):
-    answer = db_interface.query_first_item("select * from customer where customer_name = '" + username + "'")
+    answer = db_interface.query_customer_by_name(username)
 
     if answer is None:
         return None
@@ -37,7 +37,7 @@ def get_customer_id(username, input_password_cipher, length_of_password):
 
 
 def query_balance(customer_id):
-    answer = db_interface.query_first_item("select balance from customer where customer_id = '" + customer_id + "'")
+    answer = db_interface.query_balance(customer_id)
     if answer is None:
         error("Abfrage mit nicht existierender Kunden-ID")
     else:
@@ -73,7 +73,7 @@ UDPServerSocket.bind((localIP, localPort))
 
 
 def transfer(target_customer_id, customer_id, amount, reference):
-    if not db_interface.query_first_item("select * from customer where customer_id = '" + target_customer_id + "'"):
+    if not db_interface.query_customer_by_id(target_customer_id):
         return
 
     balance_transmitter = query_balance(customer_id)
@@ -124,8 +124,7 @@ while True:
             paket = decrypt(paket[20:], session_key)
             banking_command = int_from_bytes(paket[0:4])
             if banking_command == EXIT_COMMAND:
-                name = db_interface.query_first_item(
-                    "select customer_name from customer where customer_id = '" + session.customer_id + "'")
+                name = db_interface.query_customer_name(customer_id)
                 if session_list.remove_session(session.session_id) == -1:
                     error("remove session: session_id not found")
                 print(name[0] + " ausgeloggt")

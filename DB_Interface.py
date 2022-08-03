@@ -54,3 +54,15 @@ class DB_Interface:
                                           "transfer where customer_to = '" + customer_id + "' order by date desc; "
         res = self.con.execute(statement)
         return res
+
+    def query_customer_by_id(self, customer_id):
+        return self.query_first_item("select * from customer where customer_id = '" + customer_id + "'")
+
+    def query_customer_by_name(self, username):
+        return self.query_first_item("select * from customer where customer_name = '" + username + "'")
+
+    def query_balance(self, customer_id):
+        return self.query_first_item("select balance from customer where customer_id = '" + customer_id + "'")
+
+    def query_customer_name(self, customer_id):
+        self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
