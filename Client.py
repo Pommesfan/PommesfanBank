@@ -53,7 +53,7 @@ def print_turnover(turnover_list_b):
         nonlocal counter
         start = counter
         end = start + length
-        counter = length
+        counter = end
         return turnover_list_b[start:end]
 
     while turnover_list_b[counter:counter + 4] != TERMINATION:
