@@ -57,3 +57,19 @@ def split_pakets(big_paket, send_function, paket_len):
 
 
 TERMINATION = int_to_bytes(2147483647)
+
+
+class Slice_Iterator():
+    def __init__(self, data, counter=0):
+        self.__counter = counter
+        self.__data = data
+
+    def get_slice(self, length):
+        start = self.__counter
+        end = start + length
+        self.__counter = end
+        return self.__data[start:end]
+
+    def end_reached(self):
+        c = self.__counter
+        return self.__data[c:c+4] == TERMINATION

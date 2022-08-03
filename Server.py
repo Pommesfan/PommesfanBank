@@ -45,13 +45,11 @@ def query_balance(customer_id):
 
 
 def login(paket, src):
-    length_username = int_from_bytes(paket[0:4])
-    end_of_username = 4 + length_username
-    username = paket[4:end_of_username].decode(UTF8STR)
-    start_of_password = end_of_username + 4
-    length_of_password = int_from_bytes(paket[end_of_username:start_of_password])
-    end_of_password = start_of_password + length_of_password
-    password_cipher = paket[start_of_password:end_of_password + number_fill_aes_block_to_16x(length_of_password)]
+    s = Slice_Iterator(paket)
+    length_username = int_from_bytes(s.get_slice(4))
+    username = s.get_slice(length_username).decode(UTF8STR)
+    length_of_password = int_from_bytes(s.get_slice(4))
+    password_cipher = s.get_slice(length_of_password + number_fill_aes_block_to_16x(length_of_password))
 
     res = get_customer_id(username, password_cipher, length_of_password)
     if res is None:
@@ -136,10 +134,11 @@ while True:
                 else:
                     error("No customer id to session")
             elif banking_command == TRANSFER_COMMAND:
-                target_customer_id = paket[4:12].decode(UTF8STR)
-                amount = int_from_bytes(paket[12:16])
-                reference_length = int_from_bytes(paket[16:20])
-                reference = paket[20:20 + reference_length].decode(UTF8STR)
+                s = Slice_Iterator(paket, counter=4)
+                target_customer_id = s.get_slice(8).decode(UTF8STR)
+                amount = int_from_bytes(s.get_slice(4))
+                reference_length = int_from_bytes(s.get_slice(4))
+                reference = s.get_slice(reference_length).decode(UTF8STR)
                 transfer(target_customer_id, customer_id, amount, reference)
             elif banking_command == SEE_TURNOVER:
                 resume_turnover(customer_id, src, session_key)
