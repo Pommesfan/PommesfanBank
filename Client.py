@@ -9,20 +9,17 @@ username = input()
 print("Passwort eingeben:")
 password = input()
 
+username_b = username.encode(UTF8STR)
+password_b = password.encode(UTF8STR)
+
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-
-def encrypt_password(password, password_hash):
-    password_b = password.encode(UTF8STR)
-    return encrypt(password_b, password_hash)
-
-
 # send login paket
 password_hash = hashcode(password)
-password_cipher = encrypt_password(password, password_hash)
-paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username)) + username.encode(UTF8STR) \
-        + int_to_bytes(len(password)) + password_cipher
+password_cipher = encrypt(password_b, password_hash)
+paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username_b)) + username.encode(UTF8STR) \
+        + int_to_bytes(len(password_b)) + password_cipher
 UDPClientSocket.sendto(paket, dst)
 
 # receive session_id and session_cipher
@@ -82,8 +79,9 @@ while True:
         amount = int_to_bytes(int(input()))
         print("Verwendungszweck:")
         reference = input()
-        paket = int_to_bytes(TRANSFER_COMMAND) + target_customer_id + amount + int_to_bytes(len(reference))\
-            + reference.encode(UTF8STR)
+        reference_b = reference.encode(UTF8STR)
+        paket = int_to_bytes(TRANSFER_COMMAND) + target_customer_id + amount + int_to_bytes(len(reference_b))\
+            + reference_b
         cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)
