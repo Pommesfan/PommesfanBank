@@ -70,7 +70,12 @@ UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 
 
-def transfer(target_customer_id, customer_id, amount, reference):
+def transfer(customer_id, slice_iterator):
+    target_customer_id = s.get_slice(8).decode(UTF8STR)
+    amount = int_from_bytes(s.get_slice(4))
+    reference_length = int_from_bytes(s.get_slice(4))
+    reference = s.get_slice(reference_length).decode(UTF8STR)
+
     if not db_interface.query_customer_by_id(target_customer_id):
         return
 
@@ -106,6 +111,22 @@ def resume_turnover(customer_id, src, session_key):
     split_pakets(b, send_function, PAKET_LEN)
 
 
+def user_exit(customer_id):
+    name = db_interface.query_customer_name(customer_id)
+    if session_list.remove_session(session.session_id) == -1:
+        error("remove session: session_id not found")
+    print(name[0] + " ausgeloggt")
+
+
+def show_balance(customer_id):
+    if customer_id is not None:
+        balance = query_balance(customer_id)
+        paket = encrypt(int_to_bytes(balance), session.session_key)
+        UDPServerSocket.sendto(paket, src)
+    else:
+        error("No customer id to session")
+
+
 while True:
     paket, src = UDPServerSocket.recvfrom(1024)
     try:
@@ -122,24 +143,12 @@ while True:
             paket = decrypt(paket[20:], session_key)
             banking_command = int_from_bytes(paket[0:4])
             if banking_command == EXIT_COMMAND:
-                name = db_interface.query_customer_name(customer_id)
-                if session_list.remove_session(session.session_id) == -1:
-                    error("remove session: session_id not found")
-                print(name[0] + " ausgeloggt")
+                user_exit(customer_id)
             elif banking_command == SHOW_BALANCE_COMMAND:
-                if customer_id is not None:
-                    balance = query_balance(customer_id)
-                    paket = encrypt(int_to_bytes(balance), session_key)
-                    UDPServerSocket.sendto(paket, src)
-                else:
-                    error("No customer id to session")
+                show_balance(customer_id)
             elif banking_command == TRANSFER_COMMAND:
                 s = Slice_Iterator(paket, counter=4)
-                target_customer_id = s.get_slice(8).decode(UTF8STR)
-                amount = int_from_bytes(s.get_slice(4))
-                reference_length = int_from_bytes(s.get_slice(4))
-                reference = s.get_slice(reference_length).decode(UTF8STR)
-                transfer(target_customer_id, customer_id, amount, reference)
+                transfer(customer_id, s)
             elif banking_command == SEE_TURNOVER:
                 resume_turnover(customer_id, src, session_key)
     except:
