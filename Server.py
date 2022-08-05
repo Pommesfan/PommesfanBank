@@ -9,7 +9,7 @@ localIP = "127.0.0.1"
 localPort = 20001
 
 session_list = SessionList()
-db_interface = DB_Interface("Hallo.db")
+db_interface = DB_Interface("Pommesfan_Bank_DB.db")
 # db_interface.init_database()
 
 
