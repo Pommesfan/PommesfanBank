@@ -1,9 +1,19 @@
 import sqlite3
+from threading import Lock
 
 
 class DB_Interface:
     def __init__(self, url):
-        self.con = sqlite3.connect(url)
+        self.con = sqlite3.connect(url, check_same_thread=False)
+        self.__lock = Lock()
+
+    def acquire_lock(self):
+        self.__lock.acquire()
+        pass
+
+    def release_lock(self):
+        self.__lock.release()
+        pass
 
     def close(self):
         self.con.close()
