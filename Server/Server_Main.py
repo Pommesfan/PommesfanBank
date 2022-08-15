@@ -12,7 +12,7 @@ socket_read_lock = Lock()
 socket_write_lock = Lock()
 
 session_list = SessionList()
-db_interface = DB_Interface("Pommesfan_Bank_DB.db")
+db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
 # db_interface.init_database()
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
