@@ -47,7 +47,6 @@ def get_customer_id(username, input_password_cipher, length_of_password):
         return None
 
 
-
 def login(paket, src):
     s = Slice_Iterator(paket)
     length_username = int_from_bytes(s.get_slice(4))
@@ -174,5 +173,20 @@ def server_routine():
             traceback.print_exc()
 
 
+def routine_server_terminal():
+    while True:
+        print("Kommandos: 1: SQL-Code eingeben")
+        mode = int(input())
+        if mode == 1:
+            print("SQL-Code eingeben")
+            sql = input()
+            db_interface.acquire_lock()
+            res = db_interface.con.execute(sql)
+            for x in res:
+                print(x)
+            db_interface.release_lock()
+
+
 for i in range(NUMBER_OF_THREADS):
     Thread(target=server_routine).start()
+Thread(target=routine_server_terminal).start()
