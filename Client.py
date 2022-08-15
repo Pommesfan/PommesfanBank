@@ -73,14 +73,14 @@ while True:
         amount_b = decrypt(paket, session_key)[0:4]
         print("Kontostand: " + str(int_from_bytes(amount_b)))
     elif cmd == 3:
-        print("Kundennummer Empfänger:")
-        target_customer_id = input().encode(UTF8STR)
+        print("Kontonummer Empfänger:")
+        target_account_id = input().encode(UTF8STR)
         print("Betrag:")
         amount = int_to_bytes(int(input()))
         print("Verwendungszweck:")
         reference = input()
         reference_b = reference.encode(UTF8STR)
-        paket = int_to_bytes(TRANSFER_COMMAND) + target_customer_id + amount + int_to_bytes(len(reference_b))\
+        paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id + amount + int_to_bytes(len(reference_b))\
             + reference_b
         cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(

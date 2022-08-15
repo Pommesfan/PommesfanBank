@@ -19,24 +19,36 @@ class DB_Interface:
         self.con.close()
 
     def init_database(self):
-        self.con.execute("create table customer(customer_id primary key, customer_name, password, balance);")
-        self.con.execute("create table transfer(transfer_id integer primary key autoincrement, customer_from, "
-                         "customer_to, amount, date, reference, new_balance_transmitter, new_balance_receiver,"
-                         "foreign key(customer_to) references customer(customer_id),"
-                         "foreign key(customer_to) references customer(customer_id));")
+        self.con.execute("create table customer(customer_id primary key, customer_name, password);")
+        self.con.execute("create table account(account_id primary key, customer_id, balance,"
+                         "foreign key(customer_id) references customer(customer_id));")
+        self.con.execute("create table transfer(transfer_id integer primary key autoincrement, account_from, "
+                         "account_to, amount, date, reference, new_balance_transmitter, new_balance_receiver,"
+                         "foreign key(account_from) references account(account_id),"
+                         "foreign key(account_to) references account(account_id));")
         self.con.commit()
         self.add_example_customers()
 
     def add_example_customers(self):
         customers = [
-            ("45321695", "AAAA", "hallo", 6598),
-            ("15369754", "BBBB", "hi", 9832),
-            ("12498625", "CCCC", "ups", 4682),
-            ("49871283", "DDDD", "jesses", 361)
+            ("45321695", "AAAA", "hallo"),
+            ("15369754", "BBBB", "hi"),
+            ("12498625", "CCCC", "ups"),
+            ("49871283", "DDDD", "jesses")
+        ]
+        accounts = [
+            ("18697533", "45321695", 6598),
+            ("84894692", "15369754", 9832),
+            ("57986486", "12498625", 4682),
+            ("26684521", "49871283", 361),
         ]
         for c in customers:
             self.con.execute(
-                "insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "', " + str(c[3]) + ")")
+                "insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "');")
+        for a in accounts:
+            self.con.execute(
+                "insert into account values ('" + a[0] + "', '" + a[1] + "', " + str(a[2]) + ");")
+
         self.con.commit()
 
     def query_first_item(self, sql):
@@ -47,21 +59,21 @@ class DB_Interface:
             break
         return answer
 
-    def transfer(self, customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter,
+    def transfer(self, transmitter_account_id, target_account_id, new_balance_receiver, new_balance_transmitter,
                  amount, reference):
-        self.con.execute("update customer set balance = " + str(new_balance_transmitter)
-                         + " where customer_id = '" + str(customer_id) + "';")
-        self.con.execute("update customer set balance = " + str(new_balance_receiver)
-                         + " where customer_id = '" + str(target_customer_id) + "';")
-        self.con.execute("insert into transfer values(NULL, '" + customer_id + "', '" + target_customer_id + "', " +
-                         str(amount) + ", (select datetime('now', 'localtime')), '" + reference + "', " +
+        self.con.execute("update account set balance = " + str(new_balance_transmitter)
+                         + " where account_id = '" + transmitter_account_id + "';")
+        self.con.execute("update account set balance = " + str(new_balance_receiver)
+                         + " where account_id = '" + target_account_id + "';")
+        self.con.execute("insert into transfer values(NULL, '" + transmitter_account_id + "', '" + target_account_id +
+                         "', " + str(amount) + ", (select datetime('now', 'localtime')), '" + reference + "', " +
                          str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
         self.con.commit()
 
-    def query_turnover(self, customer_id):
-        statement = "select customer_to, amount * -1, date, reference from transfer where customer_from " \
-                    "= '" + customer_id + "' union all select customer_from, amount, date, reference from " \
-                                          "transfer where customer_to = '" + customer_id + "' order by date desc; "
+    def query_turnover(self, account_id):
+        statement = "select account_to, amount * -1, date, reference from transfer where account_from " \
+                    "= '" + account_id + "' union all select account_from, amount, date, reference from " \
+                                         "transfer where account_to = '" + account_id + "' order by date desc; "
         res = self.con.execute(statement)
         return res
 
@@ -71,8 +83,12 @@ class DB_Interface:
     def query_customer_by_name(self, username):
         return self.query_first_item("select * from customer where customer_name = '" + username + "'")
 
-    def query_balance(self, customer_id):
-        return self.query_first_item("select balance from customer where customer_id = '" + customer_id + "'")
+    def query_balance(self, account_id):
+        return self.query_first_item("select balance from account where account_id = '" + account_id + "'")
 
     def query_customer_name(self, customer_id):
         return self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
+
+    def query_account_to_customer(self, customer_id):
+        return self.query_first_item("select account_id from account a inner join customer c on "
+                                     "a.customer_id == c.customer_id where c.customer_id = '" + customer_id + "'")

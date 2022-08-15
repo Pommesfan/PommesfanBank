@@ -1,6 +1,6 @@
 import socket
 import traceback
-from DB_Interface import DB_Interface
+from DB_Interface import *
 from Utils import *
 from Sessions import *
 from threading import Thread, Lock
@@ -72,22 +72,24 @@ def login(paket, src):
 
 
 def transfer(customer_id, slice_iterator):
-    target_customer_id = slice_iterator.get_slice(8).decode(UTF8STR)
+    target_account_id = slice_iterator.get_slice(8).decode(UTF8STR)
     amount = int_from_bytes(slice_iterator.get_slice(4))
     reference_length = int_from_bytes(slice_iterator.get_slice(4))
     reference = slice_iterator.get_slice(reference_length).decode(UTF8STR)
 
     db_interface.acquire_lock()
-    if not db_interface.query_customer_by_id(target_customer_id):
+    transmitter_account_id = db_interface.query_account_to_customer(customer_id)[0]
+
+    balance_transmitter = db_interface.query_balance(transmitter_account_id)[0]
+    balance_receiver = db_interface.query_balance(target_account_id)
+    if transmitter_account_id == target_account_id or balance_receiver is None or amount > balance_transmitter:
+        db_interface.release_lock()
         return
 
-    balance_transmitter = db_interface.query_balance(customer_id)[0]
-    balance_receiver = db_interface.query_balance(target_customer_id)[0]
-    if amount > balance_transmitter:
-        return
+    balance_receiver = balance_receiver[0]
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(customer_id, target_customer_id, new_balance_receiver, new_balance_transmitter, amount,
+    db_interface.transfer(transmitter_account_id, target_account_id, new_balance_receiver, new_balance_transmitter, amount,
                           reference)
     db_interface.release_lock()
 
@@ -95,7 +97,8 @@ def transfer(customer_id, slice_iterator):
 def resume_turnover(customer_id, src, session_key):
     PAKET_LEN = 1472
     db_interface.acquire_lock()
-    res = db_interface.query_turnover(customer_id)
+    account_id = db_interface.query_account_to_customer(customer_id)[0]
+    res = db_interface.query_turnover(account_id)
     # make large bytes array of all information
     b = b''
     for x in res:
@@ -130,7 +133,8 @@ def user_exit(session):
 def show_balance(session):
     if session.customer_id is not None:
         db_interface.acquire_lock()
-        balance = db_interface.query_balance(session.customer_id)[0]
+        account_id = db_interface.query_account_to_customer(session.customer_id)[0]
+        balance = db_interface.query_balance(account_id)[0]
         db_interface.release_lock()
         paket = encrypt(int_to_bytes(balance), session.session_key)
 
@@ -180,11 +184,15 @@ def routine_server_terminal():
         if mode == 1:
             print("SQL-Code eingeben")
             sql = input()
-            db_interface.acquire_lock()
-            res = db_interface.con.execute(sql)
-            for x in res:
-                print(x)
-            db_interface.release_lock()
+            try:
+                db_interface.acquire_lock()
+                res = db_interface.con.execute(sql)
+                for x in res:
+                    print(x)
+            except:
+                traceback.print_exc()
+            finally:
+                db_interface.release_lock()
 
 
 for i in range(NUMBER_OF_THREADS):
