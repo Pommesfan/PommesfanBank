@@ -94,10 +94,10 @@ def transfer(customer_id, slice_iterator):
     db_interface.release_lock()
 
 
-def resume_turnover(customer_id, src, session_key):
+def resume_turnover(account_id, src, session_key):
     PAKET_LEN = 1472
     db_interface.acquire_lock()
-    account_id = db_interface.query_account_to_customer(customer_id)[0]
+    account_id = db_interface.query_account_to_customer(account_id)[0]
     res = db_interface.query_turnover(account_id)
     # make large bytes array of all information
     b = b''
@@ -106,9 +106,12 @@ def resume_turnover(customer_id, src, session_key):
         customer_id_b = x[0].encode(UTF8STR)
         amount_b = int_to_bytes(x[1])
         timestamp_b = x[2].encode(UTF8STR)
+        transmitter_name_b = x[4].encode(UTF8STR)
         reference_b = reference.encode(UTF8STR)
         reference_length_b = int_to_bytes(len(reference_b))
-        b += (customer_id_b + amount_b + timestamp_b + reference_length_b + reference_b)
+        transmitter_name_length_b = int_to_bytes(len(transmitter_name_b))
+        b += (customer_id_b + amount_b + timestamp_b + reference_length_b + reference_b +
+              transmitter_name_length_b + transmitter_name_b)
     b += TERMINATION
     db_interface.release_lock()
 

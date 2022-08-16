@@ -31,10 +31,10 @@ class DB_Interface:
 
     def add_example_customers(self):
         customers = [
-            ("45321695", "AAAA", "hallo"),
-            ("15369754", "BBBB", "hi"),
-            ("12498625", "CCCC", "ups"),
-            ("49871283", "DDDD", "jesses")
+            ("45321695", "Matthias Seehuber", "hallo"),
+            ("15369754", "Walter Brenz", "hi"),
+            ("12498625", "Zacharias Zorngiebel", "ups"),
+            ("49871283", "Ramona Schön", "jesses")
         ]
         accounts = [
             ("18697533", "45321695", 6598),
@@ -71,9 +71,12 @@ class DB_Interface:
         self.con.commit()
 
     def query_turnover(self, account_id):
-        statement = "select account_to, amount * -1, date, reference from transfer where account_from " \
-                    "= '" + account_id + "' union all select account_from, amount, date, reference from " \
-                                         "transfer where account_to = '" + account_id + "' order by date desc; "
+        statement = "select t.account_to, t.amount * -1, t.date, t.reference, c.customer_name from transfer t " \
+                    "inner join account a on t.account_from = a.account_id inner join customer c on a.customer_id = " \
+                    "c.customer_id where t.account_from = '" + account_id + "' union all select t.account_from, " \
+                    "t.amount, t.date, t.reference, c.customer_name from transfer t inner join account a on " \
+                    "t.account_from = a.account_id inner join customer c on a.customer_id = c.customer_id where " \
+                    "t.account_to = '" + account_id + "' order by date desc;"
         res = self.con.execute(statement)
         return res
 
