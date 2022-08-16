@@ -4,7 +4,7 @@ from Utils import *
 serverIP = "127.0.0.1"
 serverPort = 20001
 
-print("Nutzername eingeben:")
+print("Kundennummer oder E-Mail-Adresse eingeben:")
 username = input()
 print("Passwort eingeben:")
 password = input()
@@ -75,7 +75,7 @@ while True:
         amount_b = decrypt(paket, session_key)[0:4]
         print("Kontostand: " + str(int_from_bytes(amount_b)))
     elif cmd == 3:
-        print("Kontonummer Empfänger:")
+        print("Kontonummer/E-Mail-Adresse Empfänger:")
         target_account_id_b = input().encode(UTF8STR)
         target_account_id_length_b = int_to_bytes(len(target_account_id_b))
         print("Betrag:")

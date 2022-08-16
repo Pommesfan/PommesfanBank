@@ -98,8 +98,8 @@ def transfer(customer_id, slice_iterator):
     balance_receiver = balance_receiver[0]
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(transmitter_account_id, receiver_account_id, new_balance_receiver, new_balance_transmitter, amount,
-                          reference)
+    db_interface.transfer(transmitter_account_id, receiver_account_id, new_balance_receiver, new_balance_transmitter,
+                          amount, reference)
     db_interface.release_lock()
 
 
@@ -191,7 +191,7 @@ def server_routine():
 
 def routine_server_terminal():
     while True:
-        print("Kommandos: 1: SQL-Code eingeben")
+        print("Kommandos: 1: SQL-Code eingeben, 2: Konto anlegen")
         mode = int(input())
         if mode == 1:
             print("SQL-Code eingeben")
@@ -205,6 +205,16 @@ def routine_server_terminal():
                 traceback.print_exc()
             finally:
                 db_interface.release_lock()
+        elif mode == 2:
+            print("Name:")
+            name = input()
+            print("E-Mail-Adresse:")
+            email = input()
+            print("Passwort:")
+            password = input()
+            print("Anfänglicher Kontostand:")
+            initial_balance = int(input())
+            db_interface.set_up_customer_and_account(name, email, password, initial_balance)
 
 
 for i in range(NUMBER_OF_THREADS):

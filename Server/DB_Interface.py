@@ -59,6 +59,18 @@ class DB_Interface:
             break
         return answer
 
+    def set_up_customer_and_account(self, name, email, password, balance):
+        from Utils import create_number
+
+        customer_id = create_number(8)
+        account_id = create_number(8)
+        self.acquire_lock()
+        self.con.execute("insert into customer values ('" + customer_id + "', '" + name + "', '" + email +
+                         "', '" + password + "');")
+        self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "', " + str(balance) + ");")
+        self.con.commit()
+        self.release_lock()
+
     def transfer(self, transmitter_account_id, target_account_id, new_balance_receiver, new_balance_transmitter,
                  amount, reference):
         self.con.execute("update account set balance = " + str(new_balance_transmitter)

@@ -59,6 +59,13 @@ def split_pakets(big_paket, send_function, paket_len):
 TERMINATION = int_to_bytes(2147483647)
 
 
+def create_number(length):
+    s = ""
+    for i in range(length):
+        s += str(random.randint(0, 10, 1, int)[0])
+    return s
+
+
 class Slice_Iterator():
     def __init__(self, data, counter=0):
         self.__counter = counter
