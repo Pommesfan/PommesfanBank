@@ -85,7 +85,11 @@ def transfer(customer_id, slice_iterator):
     db_interface.acquire_lock()
     transmitter_account_id = db_interface.query_account_to_customer(customer_id, "customer_id")[0]
     if '@' in receiver_account:
-        receiver_account_id = db_interface.query_account_to_customer(receiver_account, "email")[0]
+        receiver_account_id = db_interface.query_account_to_customer(receiver_account, "email")
+        if receiver_account_id is None:
+            db_interface.release_lock()
+            return
+        receiver_account_id = receiver_account_id[0]
     else:
         receiver_account_id = receiver_account
 
