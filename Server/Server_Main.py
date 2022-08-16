@@ -31,9 +31,9 @@ def error(s):
 def get_customer_from_username(username, input_password_cipher, length_of_password):
     db_interface.acquire_lock()
     if '@' in username:
-        answer = db_interface.query_customer_by_email(username)
+        answer = db_interface.query_customer(username, "email")
     else:
-        answer = db_interface.query_customer_by_id(username)
+        answer = db_interface.query_customer(username, "customer_id")
     db_interface.release_lock()
 
     if answer is None:
@@ -76,32 +76,37 @@ def login(paket, src):
 
 
 def transfer(customer_id, slice_iterator):
-    target_account_id = slice_iterator.get_slice(8).decode(UTF8STR)
+    receiver_account_len = int_from_bytes(slice_iterator.get_slice(4))
+    receiver_account = slice_iterator.get_slice(receiver_account_len).decode(UTF8STR)
     amount = int_from_bytes(slice_iterator.get_slice(4))
     reference_length = int_from_bytes(slice_iterator.get_slice(4))
     reference = slice_iterator.get_slice(reference_length).decode(UTF8STR)
 
     db_interface.acquire_lock()
-    transmitter_account_id = db_interface.query_account_to_customer(customer_id)[0]
+    transmitter_account_id = db_interface.query_account_to_customer(customer_id, "customer_id")[0]
+    if '@' in receiver_account:
+        receiver_account_id = db_interface.query_account_to_customer(receiver_account, "email")[0]
+    else:
+        receiver_account_id = receiver_account
 
     balance_transmitter = db_interface.query_balance(transmitter_account_id)[0]
-    balance_receiver = db_interface.query_balance(target_account_id)
-    if transmitter_account_id == target_account_id or balance_receiver is None or amount > balance_transmitter:
+    balance_receiver = db_interface.query_balance(receiver_account_id)
+    if transmitter_account_id == receiver_account_id or balance_receiver is None or amount > balance_transmitter:
         db_interface.release_lock()
         return
 
     balance_receiver = balance_receiver[0]
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(transmitter_account_id, target_account_id, new_balance_receiver, new_balance_transmitter, amount,
+    db_interface.transfer(transmitter_account_id, receiver_account_id, new_balance_receiver, new_balance_transmitter, amount,
                           reference)
     db_interface.release_lock()
 
 
-def resume_turnover(account_id, src, session_key):
+def resume_turnover(customer_id, src, session_key):
     PAKET_LEN = 1472
     db_interface.acquire_lock()
-    account_id = db_interface.query_account_to_customer(account_id)[0]
+    account_id = db_interface.query_account_to_customer(customer_id, "customer_id")[0]
     res = db_interface.query_turnover(account_id)
     # make large bytes array of all information
     b = b''
@@ -140,7 +145,7 @@ def user_exit(session):
 def show_balance(session):
     if session.customer_id is not None:
         db_interface.acquire_lock()
-        account_id = db_interface.query_account_to_customer(session.customer_id)[0]
+        account_id = db_interface.query_account_to_customer(session.customer_id, "customer_id")[0]
         balance = db_interface.query_balance(account_id)[0]
         db_interface.release_lock()
         paket = encrypt(int_to_bytes(balance), session.session_key)

@@ -76,14 +76,15 @@ while True:
         print("Kontostand: " + str(int_from_bytes(amount_b)))
     elif cmd == 3:
         print("Kontonummer Empfänger:")
-        target_account_id = input().encode(UTF8STR)
+        target_account_id_b = input().encode(UTF8STR)
+        target_account_id_length_b = int_to_bytes(len(target_account_id_b))
         print("Betrag:")
-        amount = int_to_bytes(int(input()))
+        amount_b = int_to_bytes(int(input()))
         print("Verwendungszweck:")
         reference = input()
         reference_b = reference.encode(UTF8STR)
-        paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id + amount + int_to_bytes(len(reference_b))\
-            + reference_b
+        paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id_length_b + target_account_id_b + amount_b + \
+            int_to_bytes(len(reference_b)) + reference_b
         cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)

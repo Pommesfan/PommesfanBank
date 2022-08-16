@@ -80,11 +80,8 @@ class DB_Interface:
         res = self.con.execute(statement)
         return res
 
-    def query_customer_by_id(self, customer_id):
-        return self.query_first_item("select * from customer where customer_id = '" + customer_id + "'")
-
-    def query_customer_by_email(self, email):
-        return self.query_first_item("select * from customer where email = '" + email + "'")
+    def query_customer(self, argument, attribute):
+        return self.query_first_item("select * from customer where " + attribute + " = '" + argument + "'")
 
     def query_balance(self, account_id):
         return self.query_first_item("select balance from account where account_id = '" + account_id + "'")
@@ -92,6 +89,6 @@ class DB_Interface:
     def query_customer_name(self, customer_id):
         return self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
 
-    def query_account_to_customer(self, customer_id):
+    def query_account_to_customer(self, argument, attribute):
         return self.query_first_item("select account_id from account a inner join customer c on "
-                                     "a.customer_id == c.customer_id where c.customer_id = '" + customer_id + "'")
+                                     "a.customer_id == c.customer_id where c." + attribute + " = '" + argument + "'")
