@@ -83,8 +83,8 @@ class DB_Interface:
     def query_customer_by_id(self, customer_id):
         return self.query_first_item("select * from customer where customer_id = '" + customer_id + "'")
 
-    def query_customer_by_name(self, username):
-        return self.query_first_item("select * from customer where customer_name = '" + username + "'")
+    def query_customer_by_email(self, email):
+        return self.query_first_item("select * from customer where email = '" + email + "'")
 
     def query_balance(self, account_id):
         return self.query_first_item("select balance from account where account_id = '" + account_id + "'")

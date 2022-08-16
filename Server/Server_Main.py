@@ -28,9 +28,12 @@ def error(s):
     exit(1)
 
 
-def get_customer_id(username, input_password_cipher, length_of_password):
+def get_customer_from_username(username, input_password_cipher, length_of_password):
     db_interface.acquire_lock()
-    answer = db_interface.query_customer_by_name(username)
+    if '@' in username:
+        answer = db_interface.query_customer_by_email(username)
+    else:
+        answer = db_interface.query_customer_by_id(username)
     db_interface.release_lock()
 
     if answer is None:
@@ -42,7 +45,7 @@ def get_customer_id(username, input_password_cipher, length_of_password):
     input_password_b = decrypt(input_password_cipher, key)
 
     if user_password_b == input_password_b[:length_of_password]:
-        return answer[0], key
+        return answer[0], key, answer[1]
     else:
         return None
 
@@ -54,13 +57,14 @@ def login(paket, src):
     length_of_password = int_from_bytes(s.get_slice(4))
     password_cipher = s.get_slice(length_of_password + number_fill_aes_block_to_16x(length_of_password))
 
-    res = get_customer_id(username, password_cipher, length_of_password)
+    res = get_customer_from_username(username, password_cipher, length_of_password)
     if res is None:
         print("Fehllogin: Nutzer: " + username)
     else:
         customer_id = res[0]
         key = res[1]
-        print(username + " eingeloggt")
+        customer_name = res[2]
+        print("Nutzer: " + customer_id + " - " + customer_name + " eingeloggt")
         session_id = random.bytes(16)
         session_key = random.bytes(32)
         session_key_cipher = encrypt(session_key, key)
@@ -130,7 +134,7 @@ def user_exit(session):
     db_interface.release_lock()
     if session_list.remove_session(session.session_id) == -1:
         error("remove session: session_id not found")
-    print(name[0] + " ausgeloggt")
+    print("Nutzer: " + session.customer_id + " - " + name[0] + " ausgeloggt")
 
 
 def show_balance(session):
