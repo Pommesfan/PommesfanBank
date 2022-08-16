@@ -102,16 +102,16 @@ def resume_turnover(account_id, src, session_key):
     # make large bytes array of all information
     b = b''
     for x in res:
-        reference = x[3]
-        customer_id_b = x[0].encode(UTF8STR)
-        amount_b = int_to_bytes(x[1])
-        timestamp_b = x[2].encode(UTF8STR)
-        transmitter_name_b = x[4].encode(UTF8STR)
+        reference = x[4]
+        transmitter_name_b = x[0].encode(UTF8STR)
+        account_id_b = x[1].encode(UTF8STR)
+        amount_b = int_to_bytes(x[2])
+        timestamp_b = x[3].encode(UTF8STR)
+        transmitter_name_length_b = int_to_bytes(len(transmitter_name_b))
         reference_b = reference.encode(UTF8STR)
         reference_length_b = int_to_bytes(len(reference_b))
-        transmitter_name_length_b = int_to_bytes(len(transmitter_name_b))
-        b += (customer_id_b + amount_b + timestamp_b + reference_length_b + reference_b +
-              transmitter_name_length_b + transmitter_name_b)
+        b += (transmitter_name_length_b + transmitter_name_b + account_id_b + amount_b + timestamp_b +
+              reference_length_b + reference_b)
     b += TERMINATION
     db_interface.release_lock()
 

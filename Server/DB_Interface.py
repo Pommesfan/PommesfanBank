@@ -71,10 +71,10 @@ class DB_Interface:
         self.con.commit()
 
     def query_turnover(self, account_id):
-        statement = "select t.account_to, t.amount * -1, t.date, t.reference, c.customer_name from transfer t " \
-                    "inner join account a on t.account_from = a.account_id inner join customer c on a.customer_id = " \
-                    "c.customer_id where t.account_from = '" + account_id + "' union all select t.account_from, " \
-                    "t.amount, t.date, t.reference, c.customer_name from transfer t inner join account a on " \
+        statement = "select c.customer_name, t.account_to, t.amount * -1, t.date, t.reference from transfer t " \
+                    "inner join account a on t.account_to = a.account_id inner join customer c on a.customer_id = " \
+                    "c.customer_id where t.account_from = '" + account_id + "' union all select c.customer_name, " \
+                    "t.account_from, t.amount, t.date, t.reference from transfer t inner join account a on " \
                     "t.account_from = a.account_id inner join customer c on a.customer_id = c.customer_id where " \
                     "t.account_to = '" + account_id + "' order by date desc;"
         res = self.con.execute(statement)

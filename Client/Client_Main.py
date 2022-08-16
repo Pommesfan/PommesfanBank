@@ -46,15 +46,15 @@ def receive_turnover():
 def print_turnover(turnover_list_b):
     s = Slice_Iterator(turnover_list_b)
     while not s.end_reached():
+        transmitter_name_len = int_from_bytes(s.get_slice(4))
+        transmitter_name = s.get_slice(transmitter_name_len).decode(UTF8STR)
         account_id = s.get_slice(8).decode(UTF8STR)
         amount = int_from_bytes(s.get_slice(4))
         time_stamp = s.get_slice(19).decode(UTF8STR)
         reference_len = int_from_bytes(s.get_slice(4))
         reference = s.get_slice(reference_len).decode(UTF8STR)
-        transmitter_name_len = int_from_bytes(s.get_slice(4))
-        transmitter_name = s.get_slice(transmitter_name_len).decode(UTF8STR)
-        print("Kontonummer: " + account_id + "; Wert: " + str(amount) + "; Zeitpunkt: " + time_stamp +
-              "; Verwendungszweck: " + reference + "; Name: " + transmitter_name)
+        print("Name: " + transmitter_name + "; Kontonummer: " + account_id + "; Wert: " + str(amount) + "; Zeitpunkt: "
+              + time_stamp + "; Verwendungszweck: " + reference)
     print()
 
 
