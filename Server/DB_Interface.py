@@ -19,7 +19,7 @@ class DB_Interface:
         self.con.close()
 
     def init_database(self):
-        self.con.execute("create table customer(customer_id primary key, customer_name, password);")
+        self.con.execute("create table customer(customer_id primary key, customer_name, email, password);")
         self.con.execute("create table account(account_id primary key, customer_id, balance,"
                          "foreign key(customer_id) references customer(customer_id));")
         self.con.execute("create table transfer(transfer_id integer primary key autoincrement, account_from, "
@@ -31,10 +31,10 @@ class DB_Interface:
 
     def add_example_customers(self):
         customers = [
-            ("45321695", "Matthias Seehuber", "hallo"),
-            ("15369754", "Walter Brenz", "hi"),
-            ("12498625", "Zacharias Zorngiebel", "ups"),
-            ("49871283", "Ramona Schön", "jesses")
+            ("45321695", "Matthias Seehuber", "matthias.seehuber@gmx.de", "hallo"),
+            ("15369754", "Walter Brenz", "walter.brenz@web.de", "hi"),
+            ("12498625", "Zacharias Zorngiebel", "zacharias.zorngiebel@klever-mail.de", "ups"),
+            ("49871283", "Ramona Schön", "ramona.schoen@yahoo.de", "jesses")
         ]
         accounts = [
             ("18697533", "45321695", 6598),
@@ -44,7 +44,7 @@ class DB_Interface:
         ]
         for c in customers:
             self.con.execute(
-                "insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "');")
+                "insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "', '" + c[3] + "');")
         for a in accounts:
             self.con.execute(
                 "insert into account values ('" + a[0] + "', '" + a[1] + "', " + str(a[2]) + ");")

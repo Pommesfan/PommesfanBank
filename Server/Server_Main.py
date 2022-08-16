@@ -36,7 +36,7 @@ def get_customer_id(username, input_password_cipher, length_of_password):
     if answer is None:
         return None
 
-    user_password = answer[2]
+    user_password = answer[3]
     user_password_b = user_password.encode(UTF8STR)
     key = hashcode(user_password)
     input_password_b = decrypt(input_password_cipher, key)
@@ -200,4 +200,5 @@ def routine_server_terminal():
 
 for i in range(NUMBER_OF_THREADS):
     Thread(target=server_routine).start()
+
 Thread(target=routine_server_terminal).start()
