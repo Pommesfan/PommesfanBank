@@ -95,7 +95,8 @@ def transfer(customer_id, slice_iterator):
 
     balance_transmitter = db_interface.query_balance(transmitter_account_id)[0]
     balance_receiver = db_interface.query_balance(receiver_account_id)
-    if transmitter_account_id == receiver_account_id or balance_receiver is None or amount > balance_transmitter:
+    if amount < 1 or transmitter_account_id == receiver_account_id or balance_receiver is None \
+            or amount > balance_transmitter:
         db_interface.release_lock()
         return
 
