@@ -22,6 +22,13 @@ UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 
 
+def send_to_customer(paket, session):
+    cipher_paket = encrypt(paket, session.session_key)
+    socket_write_lock.acquire()
+    UDPServerSocket.sendto(cipher_paket, session.ip_and_port)
+    socket_write_lock.release()
+
+
 def error(s):
     db_interface.acquire_lock()
     db_interface.close()
@@ -111,7 +118,7 @@ def transfer(customer_id, slice_iterator):
     db_interface.release_lock()
 
 
-def resume_turnover(customer_id, src, session_key):
+def resume_turnover(customer_id, session):
     PAKET_LEN = 1472
     db_interface.acquire_lock()
     account_id = db_interface.query_account_to_customer(customer_id, "customer_id")[0]
@@ -134,9 +141,7 @@ def resume_turnover(customer_id, src, session_key):
 
     # split array into pakets and send
     def send_function(single_paket):
-        socket_write_lock.acquire()
-        UDPServerSocket.sendto(encrypt(single_paket, session_key), src)
-        socket_write_lock.release()
+        send_to_customer(single_paket, session)
 
     split_pakets(b, send_function, PAKET_LEN)
 
@@ -156,11 +161,8 @@ def show_balance(session):
         account_id = db_interface.query_account_to_customer(session.customer_id, "customer_id")[0]
         balance = db_interface.query_balance(account_id)[0]
         db_interface.release_lock()
-        paket = encrypt(int_to_bytes(balance), session.session_key)
-
-        socket_write_lock.acquire()
-        UDPServerSocket.sendto(paket, session.ip_and_port)
-        socket_write_lock.release()
+        paket = int_to_bytes(balance)
+        send_to_customer(paket, session)
     else:
         error("No customer id to session")
 
@@ -181,8 +183,7 @@ def server_routine():
                 if session is None:
                     continue
                 customer_id = session.customer_id
-                session_key = session.session_key
-                paket = decrypt(paket[20:], session_key)
+                paket = decrypt(paket[20:], session.session_key)
                 banking_command = int_from_bytes(paket[0:4])
                 if banking_command == EXIT_COMMAND:
                     user_exit(session)
@@ -192,7 +193,7 @@ def server_routine():
                     s = Slice_Iterator(paket, counter=4)
                     transfer(customer_id, s)
                 elif banking_command == SEE_TURNOVER:
-                    resume_turnover(customer_id, src, session_key)
+                    resume_turnover(customer_id, session)
         except:
             traceback.print_exc()
 
