@@ -74,7 +74,7 @@ def login(paket, src):
         key = res[1]
         customer_name = res[2]
         print("Nutzer: " + customer_id + " - " + customer_name + " eingeloggt")
-        session_id = random.bytes(16)
+        session_id = random.bytes(8)
         session_key = random.bytes(32)
         session_key_cipher = encrypt(session_key, key)
         session_list.add(Session(session_id, session_key, customer_id, src))
@@ -178,12 +178,12 @@ def server_routine():
             if command == LOGIN_COMMAND:
                 login(paket[4:], src)
             elif command == BANKING_COMMAND:
-                session = session_list.get_session_from_id(paket[4:20], src)
+                session = session_list.get_session_from_id(paket[4:12], src)
                 # session was removed due to logout
                 if session is None:
                     continue
                 customer_id = session.customer_id
-                paket = decrypt(paket[20:], session.session_key)
+                paket = decrypt(paket[12:], session.session_key)
                 banking_command = int_from_bytes(paket[0:4])
                 if banking_command == EXIT_COMMAND:
                     user_exit(session)

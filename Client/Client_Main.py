@@ -26,7 +26,7 @@ UDPClientSocket.sendto(paket, dst)
 # receive session_id and session_cipher
 paket = UDPClientSocket.recv(96)
 s = Slice_Iterator(paket)
-session_id = s.get_slice(16)
+session_id = s.get_slice(8)
 session_key = decrypt(s.get_slice(32), password_hash)
 len_currency = int_from_bytes(s.get_slice(4))
 currency = s.get_slice(len_currency).decode(UTF8STR)
