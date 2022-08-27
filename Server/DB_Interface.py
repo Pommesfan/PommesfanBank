@@ -9,46 +9,22 @@ class DB_Interface:
 
     def acquire_lock(self):
         self.__lock.acquire()
-        pass
 
     def release_lock(self):
         self.__lock.release()
-        pass
 
     def close(self):
         self.con.close()
 
     def init_database(self):
-        self.con.execute("create table customer(customer_id primary key, customer_name, email, password);")
-        self.con.execute("create table account(account_id primary key, customer_id, balance,"
-                         "foreign key(customer_id) references customer(customer_id));")
-        self.con.execute("create table transfer(transfer_id integer primary key autoincrement, account_from, "
-                         "account_to, amount, date, reference, new_balance_transmitter, new_balance_receiver,"
-                         "foreign key(account_from) references account(account_id),"
-                         "foreign key(account_to) references account(account_id));")
+        f = open("Server/SQL-Scripts/create_tables.sql")
+        self.con.executescript(f.read())
         self.con.commit()
         self.add_example_customers()
 
     def add_example_customers(self):
-        customers = [
-            ("45321695", "Matthias Seehuber", "matthias.seehuber@gmx.de", "hallo"),
-            ("15369754", "Walter Brenz", "walter.brenz@web.de", "hi"),
-            ("12498625", "Zacharias Zorngiebel", "zacharias.zorngiebel@klever-mail.de", "ups"),
-            ("49871283", "Ramona Schön", "ramona.schoen@yahoo.de", "jesses")
-        ]
-        accounts = [
-            ("18697533", "45321695", 659836),
-            ("84894692", "15369754", 983284),
-            ("57986486", "12498625", 468215),
-            ("26684521", "49871283", 36187),
-        ]
-        for c in customers:
-            self.con.execute(
-                "insert into customer values ('" + c[0] + "', '" + c[1] + "', '" + c[2] + "', '" + c[3] + "');")
-        for a in accounts:
-            self.con.execute(
-                "insert into account values ('" + a[0] + "', '" + a[1] + "', " + str(a[2]) + ");")
-
+        f = open("Server/SQL-Scripts/create_example_customers.sql")
+        self.con.executescript(f.read())
         self.con.commit()
 
     def query_first_item(self, sql):
@@ -67,7 +43,8 @@ class DB_Interface:
         self.acquire_lock()
         self.con.execute("insert into customer values ('" + customer_id + "', '" + name + "', '" + email +
                          "', '" + password + "');")
-        self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "', " + str(balance) + ");")
+        self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "', " + str(balance) +
+                         ");")
         self.con.commit()
         self.release_lock()
 
