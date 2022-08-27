@@ -1,5 +1,6 @@
 import socket
 from Utils import *
+import re
 
 serverIP = "127.0.0.1"
 serverPort = 20001
@@ -23,9 +24,30 @@ paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username_b)) + username.e
 UDPClientSocket.sendto(paket, dst)
 
 # receive session_id and session_cipher
-paket = UDPClientSocket.recv(48)
-session_id = paket[0:16]
-session_key = decrypt(paket[16:48], password_hash)
+paket = UDPClientSocket.recv(96)
+s = Slice_Iterator(paket)
+session_id = s.get_slice(16)
+session_key = decrypt(s.get_slice(32), password_hash)
+len_currency = int_from_bytes(s.get_slice(4))
+currency = s.get_slice(len_currency).decode(UTF8STR)
+decimal_position = int_from_bytes(s.get_slice(4))
+
+
+def format_amount(amount):
+    global decimal_position
+    amount = str(amount)
+    comma_position = len(amount) - decimal_position
+    return amount[:comma_position] + '.' + amount[comma_position:] + " " + currency
+
+
+def check_input_amount(amount):
+    regex = "[0-9]{1,}(\.|\,)[0-9]{" + str(decimal_position) + "}"
+    if re.fullmatch(regex, amount):
+        comma_position = len(amount) - decimal_position
+        amount = amount[:comma_position-1] + amount[comma_position:]
+        return int(amount)
+    else:
+        return -1
 
 
 def receive_turnover():
@@ -53,8 +75,8 @@ def print_turnover(turnover_list_b):
         time_stamp = s.get_slice(19).decode(UTF8STR)
         reference_len = int_from_bytes(s.get_slice(4))
         reference = s.get_slice(reference_len).decode(UTF8STR)
-        print("Name: " + transmitter_name + "; Kontonummer: " + account_id + "; Wert: " + str(amount) + "; Zeitpunkt: "
-              + time_stamp + "; Verwendungszweck: " + reference)
+        print("Name: " + transmitter_name + "; Kontonummer: " + account_id + "; Wert: " + format_amount(amount) +
+              "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
     print()
 
 
@@ -73,18 +95,22 @@ while True:
         UDPClientSocket.sendto(paket, dst)
         paket = UDPClientSocket.recv(16)
         amount_b = decrypt(paket, session_key)[0:4]
-        print("Kontostand: " + str(int_from_bytes(amount_b)))
+        print("Kontostand: " + format_amount(int_from_bytes(amount_b)))
     elif cmd == 3:
         print("Kontonummer/E-Mail-Adresse Empfänger:")
         target_account_id_b = input().encode(UTF8STR)
         target_account_id_length_b = int_to_bytes(len(target_account_id_b))
         print("Betrag:")
-        amount_b = int_to_bytes(int(input()))
+        amount = check_input_amount(input())
+        if amount < 1:
+            print("Ungültige Angabe bei Betrag")
+            continue
+        amount_b = int_to_bytes(amount)
         print("Verwendungszweck:")
         reference = input()
         reference_b = reference.encode(UTF8STR)
         paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id_length_b + target_account_id_b + amount_b + \
-            int_to_bytes(len(reference_b)) + reference_b
+                int_to_bytes(len(reference_b)) + reference_b
         cipher_paket = encrypt(paket, session_key)
         UDPClientSocket.sendto(
             banking_command_b + session_id + cipher_paket, dst)

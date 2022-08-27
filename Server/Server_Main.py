@@ -8,6 +8,8 @@ from threading import Thread, Lock
 NUMBER_OF_THREADS = 4
 localIP = "127.0.0.1"
 localPort = 20001
+CURRENCY_B = "EURO".encode(UTF8STR)
+DECIMAL_PLACE_B = int_to_bytes(2)
 socket_read_lock = Lock()
 socket_write_lock = Lock()
 
@@ -69,9 +71,10 @@ def login(paket, src):
         session_key = random.bytes(32)
         session_key_cipher = encrypt(session_key, key)
         session_list.add(Session(session_id, session_key, customer_id, src))
+        bank_information = int_to_bytes(len(CURRENCY_B)) + CURRENCY_B + DECIMAL_PLACE_B
 
         socket_write_lock.acquire()
-        UDPServerSocket.sendto(session_id + session_key_cipher, src)
+        UDPServerSocket.sendto(session_id + session_key_cipher + bank_information, src)
         socket_write_lock.release()
 
 
