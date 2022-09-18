@@ -88,7 +88,7 @@ def login(paket, src):
         customer_socket_write_lock.release()
 
 
-def transfer(transmitter_account_id, receiver_account_id, amount, reference):
+def transfer(transfer_type, transmitter_account_id, receiver_account_id, amount, reference):
     db_interface.acquire_lock()
     balance_transmitter = db_interface.query_balance(transmitter_account_id)[0]
     balance_receiver = db_interface.query_balance(receiver_account_id)
@@ -100,8 +100,8 @@ def transfer(transmitter_account_id, receiver_account_id, amount, reference):
     balance_receiver = balance_receiver[0]
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(transmitter_account_id, receiver_account_id, new_balance_receiver, new_balance_transmitter,
-                          amount, reference)
+    db_interface.transfer(transfer_type, transmitter_account_id, receiver_account_id, new_balance_receiver,
+                          new_balance_transmitter, amount, reference)
     db_interface.release_lock()
 
 
@@ -119,7 +119,7 @@ def transfer_from_session(session, slice_iterator):
             return
         receiver_account_id = res[0]
 
-    transfer(transmitter_account_id, receiver_account_id, amount, reference)
+    transfer(MANUAL_TRANSFER, transmitter_account_id, receiver_account_id, amount, reference)
 
 
 def transfer_from_debit_card(paket):
@@ -150,7 +150,7 @@ def transfer_from_debit_card(paket):
     amount = s.get_int()
     reference = s.next_slice().decode(UTF8STR)
 
-    transfer(account_from, account_to, amount, reference)
+    transfer(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference)
 
 
 def resume_turnover(customer_id, session):
@@ -161,15 +161,16 @@ def resume_turnover(customer_id, session):
     # make large bytes array of all information
     b = b''
     for x in res:
-        reference = x[4]
-        transmitter_name_b = x[0].encode(UTF8STR)
-        account_id_b = x[1].encode(UTF8STR)
-        amount_b = int_to_bytes(x[2])
-        timestamp_b = x[3].encode(UTF8STR)
+        reference = x[5]
+        transfer_type = int_to_bytes(x[0])
+        transmitter_name_b = x[1].encode(UTF8STR)
+        account_id_b = x[2].encode(UTF8STR)
+        amount_b = int_to_bytes(x[3])
+        timestamp_b = x[4].encode(UTF8STR)
         transmitter_name_length_b = int_to_bytes(len(transmitter_name_b))
         reference_b = reference.encode(UTF8STR)
         reference_length_b = int_to_bytes(len(reference_b))
-        b += (transmitter_name_length_b + transmitter_name_b + account_id_b + amount_b + timestamp_b +
+        b += (transfer_type + transmitter_name_length_b + transmitter_name_b + account_id_b + amount_b + timestamp_b +
               reference_length_b + reference_b)
     b += TERMINATION
     db_interface.release_lock()

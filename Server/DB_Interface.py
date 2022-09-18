@@ -49,30 +49,29 @@ class DB_Interface:
     def set_up_debit_card(self, customer_id, debit_card_number, debit_card_key):
         self.acquire_lock()
         self.con.execute("insert into debit_card values('" + debit_card_number + "', ?, '"
-                         + customer_id + "');", (sqlite3.Binary(debit_card_key), ))
+                         + customer_id + "');", (sqlite3.Binary(debit_card_key),))
         self.con.commit()
         self.release_lock()
 
-    def transfer(self, transmitter_account_id, target_account_id, new_balance_receiver, new_balance_transmitter,
-                 amount, reference):
+    def transfer(self, transfer_type, transmitter_account_id, target_account_id, new_balance_receiver,
+                 new_balance_transmitter, amount, reference):
         self.con.execute("update account set balance = " + str(new_balance_transmitter)
                          + " where account_id = '" + transmitter_account_id + "';")
         self.con.execute("update account set balance = " + str(new_balance_receiver)
                          + " where account_id = '" + target_account_id + "';")
-        self.con.execute("insert into transfer values(NULL, '" + transmitter_account_id + "', '" + target_account_id +
-                         "', " + str(amount) + ", (select datetime('now', 'localtime')), '" + reference + "', " +
-                         str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
+        self.con.execute("insert into transfer values(NULL, '"+ str(transfer_type) + "', '" + transmitter_account_id +
+                         "', '" + target_account_id + "', " + str(amount) + ", (select datetime('now', 'localtime')), '"
+                         + reference + "', " + str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
         self.con.commit()
 
     def query_turnover(self, account_id):
-        statement = "select c.customer_name, t.account_to, t.amount * -1, t.date, t.reference from transfer t " \
-                    "inner join account a on t.account_to = a.account_id inner join customer c on a.customer_id = " \
-                    "c.customer_id where t.account_from = '" + account_id + "' union all select c.customer_name, " \
-                    "t.account_from, t.amount, t.date, t.reference from transfer t inner join account a on " \
-                    "t.account_from = a.account_id inner join customer c on a.customer_id = c.customer_id where " \
-                    "t.account_to = '" + account_id + "' order by date desc;"
-        res = self.con.execute(statement)
-        return res
+        statement = "select t.transfer_type, c.customer_name, t.account_to, t.amount * -1, t.date, t.reference from " \
+                    "transfer t inner join account a on t.account_to = a.account_id inner join customer c on " \
+                    "a.customer_id = c.customer_id where t.account_from = '" + account_id + "' union all select " \
+                    "t.transfer_type, c.customer_name, t.account_from, t.amount, t.date, t.reference from transfer t " \
+                    "inner join account a on t.account_from = a.account_id inner join customer c on a.customer_id = " \
+                    "c.customer_id where t.account_to = '" + account_id + "' order by date desc;"
+        return self.con.execute(statement)
 
     def query_customer(self, argument, attribute):
         return self.query_first_item("select * from customer where " + attribute + " = '" + argument + "'")

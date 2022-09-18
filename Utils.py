@@ -10,6 +10,9 @@ SHOW_BALANCE_COMMAND = 3
 TRANSFER_COMMAND = 4
 SEE_TURNOVER = 5
 
+MANUAL_TRANSFER = 1
+DEBIT_CARD_PAYMENT = 2
+
 
 def int_to_bytes(i):
     return int.to_bytes(i, 4, "big", signed=True)

@@ -2,6 +2,7 @@ import socket
 from Utils import *
 import re
 
+TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]
 serverIP = "127.0.0.1"
 serverPort = 20001
 
@@ -67,13 +68,14 @@ def receive_turnover():
 def print_turnover(turnover_list_b):
     s = Slice_Iterator(turnover_list_b)
     while not s.end_reached():
+        transfer_type = s.get_int()
         transmitter_name = s.next_slice().decode(UTF8STR)
         account_id = s.get_slice(8).decode(UTF8STR)
         amount = s.get_int()
         time_stamp = s.get_slice(19).decode(UTF8STR)
         reference = s.next_slice().decode(UTF8STR)
-        print("Name: " + transmitter_name + "; Kontonummer: " + account_id + "; Wert: " + format_amount(amount) +
-              "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
+        print(TRANSFER_TYPES[transfer_type - 1] + " - Name: " + transmitter_name + "; Kontonummer: " + account_id +
+              "; Wert: " + format_amount(amount) + "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
     print()
 
 
