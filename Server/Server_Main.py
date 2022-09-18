@@ -65,8 +65,7 @@ def get_customer_from_username(username, input_password_cipher, length_of_passwo
 
 def login(paket, src):
     s = Slice_Iterator(paket)
-    length_username = int_from_bytes(s.get_slice(4))
-    username = s.get_slice(length_username).decode(UTF8STR)
+    username = s.next_slice().decode(UTF8STR)
     length_of_password = int_from_bytes(s.get_slice(4))
     password_cipher = s.get_slice(length_of_password + number_fill_aes_block_to_16x(length_of_password))
 
@@ -125,8 +124,7 @@ def transfer_from_session(session, slice_iterator):
 
 def transfer_from_debit_card(paket):
     s = Slice_Iterator(paket)
-    len_terminal_id = int_from_bytes(s.get_slice(4))
-    terminal_id = s.get_slice(len_terminal_id).decode(UTF8STR)
+    terminal_id = s.next_slice().decode(UTF8STR)
     terminal = db_interface.query_terminal(terminal_id)
 
     if terminal is None:
@@ -135,8 +133,7 @@ def transfer_from_debit_card(paket):
     terminal_key = terminal[1]
     account_to = terminal[2]
 
-    len_cipher_paket = int_from_bytes(s.get_slice(4))
-    cipher_paket = s.get_slice(len_cipher_paket)
+    cipher_paket = s.next_slice()
     paket = decrypt(cipher_paket, hashcode(terminal_key))
     s = Slice_Iterator(paket)
     card_number = s.get_slice(16)
@@ -150,9 +147,8 @@ def transfer_from_debit_card(paket):
 
     if card_key_from_db != card_key_from_paket:
         return
-    amount = int_from_bytes(s.get_slice(4))
-    len_reference = int_from_bytes(s.get_slice(4))
-    reference = s.get_slice(len_reference).decode(UTF8STR)
+    amount = s.get_int()
+    reference = s.next_slice().decode(UTF8STR)
 
     transfer(account_from, account_to, amount, reference)
 

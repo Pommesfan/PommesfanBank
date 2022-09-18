@@ -28,9 +28,8 @@ paket = UDPClientSocket.recv(96)
 s = Slice_Iterator(paket)
 session_id = s.get_slice(8)
 session_key = decrypt(s.get_slice(32), password_hash)
-len_currency = int_from_bytes(s.get_slice(4))
-currency = s.get_slice(len_currency).decode(UTF8STR)
-decimal_position = int_from_bytes(s.get_slice(4))
+currency = s.next_slice().decode(UTF8STR)
+decimal_position = s.get_int()
 
 
 def format_amount(amount):
@@ -68,13 +67,11 @@ def receive_turnover():
 def print_turnover(turnover_list_b):
     s = Slice_Iterator(turnover_list_b)
     while not s.end_reached():
-        transmitter_name_len = int_from_bytes(s.get_slice(4))
-        transmitter_name = s.get_slice(transmitter_name_len).decode(UTF8STR)
+        transmitter_name = s.next_slice().decode(UTF8STR)
         account_id = s.get_slice(8).decode(UTF8STR)
-        amount = int_from_bytes(s.get_slice(4))
+        amount = s.get_int()
         time_stamp = s.get_slice(19).decode(UTF8STR)
-        reference_len = int_from_bytes(s.get_slice(4))
-        reference = s.get_slice(reference_len).decode(UTF8STR)
+        reference = s.next_slice().decode(UTF8STR)
         print("Name: " + transmitter_name + "; Kontonummer: " + account_id + "; Wert: " + format_amount(amount) +
               "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
     print()

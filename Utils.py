@@ -77,6 +77,12 @@ class Slice_Iterator():
         self.__counter = end
         return self.__data[start:end]
 
+    def get_int(self):
+        return int_from_bytes(self.get_slice(4))
+
+    def next_slice(self):
+        return self.get_slice(self.get_int())
+
     def end_reached(self):
         c = self.__counter
         return self.__data[c:c+4] == TERMINATION
