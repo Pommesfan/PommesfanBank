@@ -246,10 +246,13 @@ def customer_routine():
 
 def card_terminal_routine():
     while True:
-        card_terminal_socket_read_lock.acquire()
-        paket, src = terminal_udp_socket.recvfrom(1024)
-        card_terminal_socket_read_lock.release()
-        transfer_from_debit_card(paket)
+        try:
+            card_terminal_socket_read_lock.acquire()
+            paket, src = terminal_udp_socket.recvfrom(1024)
+            card_terminal_socket_read_lock.release()
+            transfer_from_debit_card(paket)
+        except:
+            traceback.print_exc()
 
 
 def routine_server_terminal():

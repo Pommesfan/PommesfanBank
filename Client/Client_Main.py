@@ -52,17 +52,7 @@ def check_input_amount(amount):
 
 def receive_turnover():
     PAKET_LEN = 1472
-    initial_paket = decrypt(UDPClientSocket.recv(16), session_key)
-    number_of_full_pakets = int_from_bytes(initial_paket[0:4])
-    size_of_last_paket = int_from_bytes(initial_paket[4:8])
-    b = b''
-    for i in range(number_of_full_pakets):
-        paket = UDPClientSocket.recv(PAKET_LEN)
-        b += (decrypt(paket, session_key))
-    if size_of_last_paket != 0:
-        paket = UDPClientSocket.recv(size_of_last_paket + number_fill_aes_block_to_16x(size_of_last_paket))
-        b += (decrypt(paket, session_key))
-    return b
+    return unite_pakets(PAKET_LEN, UDPClientSocket, session_key)
 
 
 def print_turnover(turnover_list_b):
