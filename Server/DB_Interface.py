@@ -37,7 +37,6 @@ class DB_Interface:
 
     def set_up_customer_and_account(self, name, email, password, balance):
         from Utils import create_number
-
         customer_id = create_number(8)
         account_id = create_number(8)
         self.acquire_lock()
@@ -45,6 +44,12 @@ class DB_Interface:
                          "', '" + password + "');")
         self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "', " + str(balance) +
                          ");")
+        self.release_lock()
+
+    def set_up_debit_card(self, customer_id, debit_card_number, debit_card_key):
+        self.acquire_lock()
+        self.con.execute("insert into debit_card values('" + debit_card_number + "', ?, '"
+                         + customer_id + "');", (sqlite3.Binary(debit_card_key), ))
         self.con.commit()
         self.release_lock()
 
@@ -81,3 +86,10 @@ class DB_Interface:
     def query_account_to_customer(self, argument, attribute):
         return self.query_first_item("select account_id from account a inner join customer c on "
                                      "a.customer_id == c.customer_id where c." + attribute + " = '" + argument + "'")
+
+    def query_terminal(self, terminal_id):
+        return self.query_first_item("select * from terminal where terminal_id = '" + terminal_id + "';")
+
+    def query_account_to_card(self, card_number):
+        return self.query_first_item("""select a.account_id, d.card_key from debit_card d inner join account a on
+        d.customer_id = a.customer_id where d.card_number = '""" + card_number + "';")
