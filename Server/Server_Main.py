@@ -291,7 +291,8 @@ def routine_server_terminal():
             create_debit_card(customer_id, pin, path)
 
 
-for i in range(NUMBER_OF_THREADS):
-    Thread(target=customer_routine).start()
-Thread(target=card_terminal_routine).start()
-Thread(target=routine_server_terminal).start()
+if __name__ == '__main__':
+    for i in range(NUMBER_OF_THREADS):
+        Thread(target=customer_routine).start()
+    Thread(target=card_terminal_routine).start()
+    Thread(target=routine_server_terminal).start()

@@ -44,7 +44,7 @@ def check_input_amount(amount):
     regex = "[0-9]{1,}(\.|\,)[0-9]{" + str(decimal_position) + "}"
     if re.fullmatch(regex, amount):
         comma_position = len(amount) - decimal_position
-        amount = amount[:comma_position-1] + amount[comma_position:]
+        amount = amount[:comma_position - 1] + amount[comma_position:]
         return int(amount)
     else:
         return -1
@@ -75,38 +75,39 @@ def send_to_server(paket):
         banking_command_b + session_id + cipher_paket, dst)
 
 
-while True:
-    banking_command_b = int_to_bytes(BANKING_COMMAND)
-    print("Komandos: 1:Ausloggen, 2:abfragen, 3:überweisen, 4:Umsatzübersicht")
-    cmd = int(input())
-    if cmd == 1:
-        paket = int_to_bytes(EXIT_COMMAND)
-        send_to_server(paket)
-        break
-    elif cmd == 2:
-        paket = int_to_bytes(SHOW_BALANCE_COMMAND)
-        send_to_server(paket)
-        paket = UDPClientSocket.recv(16)
-        amount_b = decrypt(paket, session_key)[0:4]
-        print("Kontostand: " + format_amount(int_from_bytes(amount_b)))
-    elif cmd == 3:
-        print("Kontonummer/E-Mail-Adresse Empfänger:")
-        target_account_id_b = input().encode(UTF8STR)
-        target_account_id_length_b = int_to_bytes(len(target_account_id_b))
-        print("Betrag:")
-        amount = check_input_amount(input())
-        if amount < 1:
-            print("Ungültige Angabe bei Betrag")
-            continue
-        amount_b = int_to_bytes(amount)
-        print("Verwendungszweck:")
-        reference = input()
-        reference_b = reference.encode(UTF8STR)
-        paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id_length_b + target_account_id_b + amount_b + \
-                int_to_bytes(len(reference_b)) + reference_b
-        send_to_server(paket)
-    elif cmd == 4:
-        paket = int_to_bytes(SEE_TURNOVER)
-        send_to_server(paket)
-        turnover_list_b = receive_turnover()
-        print_turnover(turnover_list_b)
+if __name__ == '__main__':
+    while True:
+        banking_command_b = int_to_bytes(BANKING_COMMAND)
+        print("Komandos: 1:Ausloggen, 2:abfragen, 3:überweisen, 4:Umsatzübersicht")
+        cmd = int(input())
+        if cmd == 1:
+            paket = int_to_bytes(EXIT_COMMAND)
+            send_to_server(paket)
+            break
+        elif cmd == 2:
+            paket = int_to_bytes(SHOW_BALANCE_COMMAND)
+            send_to_server(paket)
+            paket = UDPClientSocket.recv(16)
+            amount_b = decrypt(paket, session_key)[0:4]
+            print("Kontostand: " + format_amount(int_from_bytes(amount_b)))
+        elif cmd == 3:
+            print("Kontonummer/E-Mail-Adresse Empfänger:")
+            target_account_id_b = input().encode(UTF8STR)
+            target_account_id_length_b = int_to_bytes(len(target_account_id_b))
+            print("Betrag:")
+            amount = check_input_amount(input())
+            if amount < 1:
+                print("Ungültige Angabe bei Betrag")
+                continue
+            amount_b = int_to_bytes(amount)
+            print("Verwendungszweck:")
+            reference = input()
+            reference_b = reference.encode(UTF8STR)
+            paket = int_to_bytes(TRANSFER_COMMAND) + target_account_id_length_b + target_account_id_b + amount_b + \
+                    int_to_bytes(len(reference_b)) + reference_b
+            send_to_server(paket)
+        elif cmd == 4:
+            paket = int_to_bytes(SEE_TURNOVER)
+            send_to_server(paket)
+            turnover_list_b = receive_turnover()
+            print_turnover(turnover_list_b)
