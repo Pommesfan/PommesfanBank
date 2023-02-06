@@ -1,10 +1,14 @@
+import os.path
 import sqlite3
 from threading import Lock
 
 
 class DB_Interface:
     def __init__(self, url):
+        is_new = not os.path.isfile(url)
         self.con = sqlite3.connect(url, check_same_thread=False)
+        if is_new:
+            self.__init_database__()
         self.__lock = Lock()
 
     def acquire_lock(self):
@@ -16,7 +20,7 @@ class DB_Interface:
     def close(self):
         self.con.close()
 
-    def init_database(self):
+    def __init_database__(self):
         f = open("Server/SQL-Scripts/create_tables.sql")
         self.con.executescript(f.read())
         self.con.commit()

@@ -18,7 +18,6 @@ card_terminal_socket_write_lock = Lock()
 
 session_list = SessionList()
 db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
-# db_interface.init_database()
 
 customer_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 customer_udp_socket.bind((localIP, local_port_customer))
