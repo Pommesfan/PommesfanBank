@@ -1,0 +1,7 @@
+FROM python:3.9
+RUN pip install pycrypto
+RUN pip install numpy
+COPY Server/SQL-Scripts/create_tables.sql Server/SQL-Scripts/create_tables.sql
+COPY Server/SQL-Scripts/create_example_customers.sql Server/SQL-Scripts/create_example_customers.sql
+ADD Server/Server_Main.py Server/DB_Interface.py Server/Sessions.py Utils.py .
+CMD ["python", "Server_Main.py"]
