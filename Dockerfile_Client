@@ -1,0 +1,5 @@
+FROM python:3.9
+RUN pip install pycrypto
+RUN pip install numpy
+ADD Client/Client_Main.py Utils.py .
+CMD ["python", "Client_Main.py"]
