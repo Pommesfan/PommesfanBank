@@ -1,4 +1,5 @@
 FROM python:3.9
+EXPOSE 20001/udp
 RUN pip install pycrypto
 RUN pip install numpy
 COPY Server/SQL-Scripts/create_tables.sql Server/SQL-Scripts/create_tables.sql
