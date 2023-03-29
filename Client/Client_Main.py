@@ -6,6 +6,9 @@ TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]
 serverIP = "127.0.0.1"
 serverPort = 20001
 
+localIP = "127.0.0.2"
+localPort = 20002
+
 print("Kundennummer oder E-Mail-Adresse eingeben:")
 username = input()
 print("Passwort eingeben:")
@@ -16,6 +19,7 @@ password_b = password.encode(UTF8STR)
 
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+UDPClientSocket.bind((localIP, localPort)) # for docker
 
 # send login paket
 password_hash = hashcode(password)
