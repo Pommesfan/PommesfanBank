@@ -157,7 +157,7 @@ def transfer_from_debit_card(paket):
 def tcp_on_demand(indexOfThread, session):
     send_to_customer(int_to_bytes(firstPortTCP + indexOfThread), session)
     tcp_server_socket = tcp_sockets_to_threads[indexOfThread]
-    tcp_server_socket.listen()
+    tcp_server_socket.listen(1)
     client, _ = tcp_server_socket.accept()
     return client
 
