@@ -9,6 +9,7 @@ NUMBER_OF_THREADS = 4
 localIP = "127.0.0.1"
 local_port_customer = 20001
 local_port_terminal = 20002
+firstPortTCP = 20010
 CURRENCY_B = "EURO".encode(UTF8STR)
 DECIMAL_PLACE_B = int_to_bytes(2)
 customer_socket_read_lock = Lock()
@@ -23,6 +24,7 @@ customer_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRA
 customer_udp_socket.bind((localIP, local_port_customer))
 terminal_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 terminal_udp_socket.bind((localIP, local_port_terminal))
+tcp_sockets_to_threads = []
 
 
 def send_to_customer(paket, session):
@@ -152,8 +154,15 @@ def transfer_from_debit_card(paket):
     transfer(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference)
 
 
-def resume_turnover(customer_id, session):
-    PAKET_LEN = 1472
+def tcp_on_demand(indexOfThread, session):
+    send_to_customer(int_to_bytes(firstPortTCP + indexOfThread), session)
+    tcp_server_socket = tcp_sockets_to_threads[indexOfThread]
+    tcp_server_socket.listen()
+    client, _ = tcp_server_socket.accept()
+    return client
+
+
+def resume_turnover(customer_id, session, indexOfThread):
     db_interface.acquire_lock()
     account_id = db_interface.query_account_to_customer(customer_id, "customer_id")[0]
     res = db_interface.query_turnover(account_id)
@@ -174,11 +183,10 @@ def resume_turnover(customer_id, session):
     b += TERMINATION
     db_interface.release_lock()
 
-    # split array into pakets and send
-    def send_function(single_paket):
-        send_to_customer(single_paket, session)
-
-    split_pakets(b, send_function, PAKET_LEN)
+    client = tcp_on_demand(indexOfThread, session)
+    client.send(int_to_bytes(len(b)))
+    client.send(b)
+    client.close()
 
 
 def user_exit(session):
@@ -212,7 +220,7 @@ def create_debit_card(customer_id, pin, path):
     f.close()
 
 
-def customer_routine():
+def customer_routine(indexOfThread):
     while True:
         customer_socket_read_lock.acquire()
         paket, src = customer_udp_socket.recvfrom(1024)
@@ -238,7 +246,7 @@ def customer_routine():
                     s = Slice_Iterator(paket, counter=4)
                     transfer_from_session(session, s)
                 elif banking_command == SEE_TURNOVER:
-                    resume_turnover(customer_id, session)
+                    resume_turnover(customer_id, session, indexOfThread)
         except:
             traceback.print_exc()
 
@@ -292,6 +300,9 @@ def routine_server_terminal():
 
 if __name__ == '__main__':
     for i in range(NUMBER_OF_THREADS):
-        Thread(target=customer_routine).start()
+        Thread(target=customer_routine, args=[i]).start()
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_socket.bind((localIP, firstPortTCP + i))
+        tcp_sockets_to_threads.append(tcp_socket)
     Thread(target=card_terminal_routine).start()
     Thread(target=routine_server_terminal).start()

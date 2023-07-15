@@ -54,9 +54,20 @@ def check_input_amount(amount):
         return -1
 
 
+def tcp_on_demand():
+    initial_paket = decrypt(UDPClientSocket.recv(16), session_key)
+    tcp_server_port = int_from_bytes(initial_paket[0:4])
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((serverIP, tcp_server_port))
+    return client
+
+
 def receive_turnover():
-    PAKET_LEN = 1472
-    return unite_pakets(PAKET_LEN, UDPClientSocket, session_key)
+    client = tcp_on_demand()
+    length = int_from_bytes(client.recv(4))
+    data = client.recv(length)
+    client.close()
+    return data
 
 
 def print_turnover(turnover_list_b):

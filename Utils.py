@@ -45,34 +45,6 @@ def decrypt(cipher, key):
     return aes.decrypt(cipher)
 
 
-def split_pakets(big_paket, send_function, paket_len):
-    number_of_full_pakets = int(len(big_paket) / paket_len)
-    size_of_last_paket = len(big_paket) % paket_len
-    initial_paket = int_to_bytes(number_of_full_pakets) + int_to_bytes(size_of_last_paket)
-    send_function(initial_paket)
-    for i in range(number_of_full_pakets):
-        paket = big_paket[i * paket_len: (i + 1) * paket_len]
-        send_function(paket)
-
-    last_paket = big_paket[number_of_full_pakets * paket_len:]
-    if len(last_paket) != 0:
-        send_function(last_paket)
-
-
-def unite_pakets(paket_len, udp_socket, session_key):
-    initial_paket = decrypt(udp_socket.recv(16), session_key)
-    number_of_full_pakets = int_from_bytes(initial_paket[0:4])
-    size_of_last_paket = int_from_bytes(initial_paket[4:8])
-    b = b''
-    for i in range(number_of_full_pakets):
-        paket = udp_socket.recv(paket_len)
-        b += (decrypt(paket, session_key))
-    if size_of_last_paket != 0:
-        paket = udp_socket.recv(size_of_last_paket + number_fill_aes_block_to_16x(size_of_last_paket))
-        b += (decrypt(paket, session_key))
-    return b
-
-
 TERMINATION = int_to_bytes(2147483647)
 
 

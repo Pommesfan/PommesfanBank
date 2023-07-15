@@ -21,13 +21,13 @@ class DB_Interface:
         self.con.close()
 
     def __init_database__(self):
-        f = open("Server/SQL-Scripts/create_tables.sql")
+        f = open("/home/johannes/Programming/PommesfanBank/Server/SQL-Scripts/create_tables.sql")
         self.con.executescript(f.read())
         self.con.commit()
         self.add_example_customers()
 
     def add_example_customers(self):
-        f = open("Server/SQL-Scripts/create_example_customers.sql")
+        f = open("/home/johannes/Programming/PommesfanBank/Server/SQL-Scripts/create_example_customers.sql")
         self.con.executescript(f.read())
         self.con.commit()
 
