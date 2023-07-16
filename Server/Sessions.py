@@ -1,5 +1,7 @@
 from threading import Lock
 
+import Server.Sessions
+
 
 class Session:
     def __init__(self, session_id, session_key, customer_id, ip_and_port):
@@ -15,7 +17,7 @@ class SessionList:
         self.__lock = Lock()
 
     def add(self, session):
-        if isinstance(session, Session):
+        if isinstance(session, Server.Sessions.Session):
             session_with_same_customer = self.get_session_to_customer(session.customer_id)
             self.__lock.acquire()
             if session_with_same_customer is not None:
