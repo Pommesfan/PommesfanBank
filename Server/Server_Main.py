@@ -1,6 +1,7 @@
 import socket
 import traceback
 from DB_Interface import *
+from Server.CardTerminalService import CardTerminalService
 from Server.CustomerService import CustomerService
 from Utils import *
 from Sessions import *
@@ -14,56 +15,10 @@ firstPortTCP = 20010
 CURRENCY_B = "EURO".encode(UTF8STR)
 DECIMAL_PLACE_B = int_to_bytes(2)
 
-terminal_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-terminal_udp_socket.bind((localIP, local_port_terminal))
-
-card_terminal_socket_read_lock = Lock()
-card_terminal_socket_write_lock = Lock()
-
 session_list = SessionList()
 db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
 
-
-def transfer_from_debit_card(paket):
-    s = Slice_Iterator(paket)
-    terminal_id = s.next_slice().decode(UTF8STR)
-    terminal = db_interface.query_terminal(terminal_id)
-
-    if terminal is None:
-        return
-
-    terminal_key = terminal[1]
-    account_to = terminal[2]
-
-    cipher_paket = s.next_slice()
-    paket = decrypt(cipher_paket, hashcode(terminal_key))
-    s = Slice_Iterator(paket)
-    card_number = s.get_slice(16)
-    card_key_from_paket = s.get_slice(64)
-    res = db_interface.query_account_to_card(card_number.decode(UTF8STR))
-    if res is None:
-        return
-    else:
-        account_from = res[0]
-        card_key_from_db = res[1]
-
-    if card_key_from_db != card_key_from_paket:
-        return
-    amount = s.get_int()
-    reference = s.next_slice().decode(UTF8STR)
-
-    transfer(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference)
-
-
-def card_terminal_routine():
-    while True:
-        try:
-            card_terminal_socket_read_lock.acquire()
-            paket, src = terminal_udp_socket.recvfrom(1024)
-            card_terminal_socket_read_lock.release()
-            transfer_from_debit_card(paket)
-        except:
-            traceback.print_exc()
+card_terminal_socket_write_lock = Lock()
 
 
 def routine_server_terminal():
@@ -138,17 +93,21 @@ if __name__ == '__main__':
 
     for i in range(NUMBER_OF_THREADS):
         CustomerService(
-            i,
+            firstPortTCP + i,
             db_interface,
             session_list,
             __customer_socket_read_lock,
             __customer_socket_write_lock,
             __customer_udp_socket,
             localIP,
-            firstPortTCP,
             CURRENCY_B,
             DECIMAL_PLACE_B,
             transfer
         ).start()
-    Thread(target=card_terminal_routine).start()
+
+    terminal_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    terminal_udp_socket.bind((localIP, local_port_terminal))
+    card_terminal_socket_read_lock = Lock()
+
+    CardTerminalService(db_interface, transfer, terminal_udp_socket, card_terminal_socket_read_lock).start()
     Thread(target=routine_server_terminal).start()

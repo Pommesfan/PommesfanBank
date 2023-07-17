@@ -6,11 +6,11 @@ from Utils import *
 
 
 class CustomerService:
-    def __init__(self, thread_index, dbInterface, sessionList, customer_socket_read_lock, customer_socket_write_lock,
-                 customer_udp_socket, localIP, firstPortTCP, CURRENCY_B, DECIMAL_PLACE_B, transfer_function):
-        self.__thread_index = thread_index
+    def __init__(self, tcp_port, dbInterface, sessionList, customer_socket_read_lock, customer_socket_write_lock,
+                 customer_udp_socket, localIP, CURRENCY_B, DECIMAL_PLACE_B, transfer_function):
+        self.__tcp_port = tcp_port
         self.__tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.__tcp_socket.bind((localIP, firstPortTCP + thread_index))
+        self.__tcp_socket.bind((localIP, tcp_port))
         self.__thread = Thread(target=self.customer_routine)
         self.__db_interface = dbInterface
         self.__session_list = sessionList
@@ -18,7 +18,6 @@ class CustomerService:
         self.__customer_socket_write_lock = customer_socket_write_lock
         self.__customer_udp_socket = customer_udp_socket
         self.__localIP = localIP
-        self.__firstPortTCP = firstPortTCP
         self.__CURRENCY_B = CURRENCY_B
         self.__DECIMAL_PLACE_B = DECIMAL_PLACE_B
         self.__transfer_function = transfer_function
@@ -101,7 +100,7 @@ class CustomerService:
         self.__transfer_function(MANUAL_TRANSFER, transmitter_account_id, receiver_account_id, amount, reference)
 
     def tcp_on_demand(self, session):
-        self.send_to_customer(int_to_bytes(self.__firstPortTCP + self.__thread_index), session)
+        self.send_to_customer(int_to_bytes(self.__tcp_port), session)
         self.__tcp_socket.listen(1)
         client, _ = self.__tcp_socket.accept()
         return client
