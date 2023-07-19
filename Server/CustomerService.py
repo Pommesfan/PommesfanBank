@@ -109,8 +109,15 @@ class CustomerService:
         self.__db_interface.acquire_lock()
         account_id = self.__db_interface.query_account_to_customer(customer_id, "customer_id")[0]
         res = self.__db_interface.query_turnover(account_id)
-        # make large bytes array of all information
-        b = b''
+        client = self.tcp_on_demand(session)
+
+        def overflow_function(b):
+            cipher = encrypt(b, session.session_key)
+            client.send(int_to_bytes(len(cipher)))
+            client.send(cipher)
+
+        buf = ByteBuffer(1024, overflow_function)
+
         for x in res:
             reference = x[5]
             transfer_type = int_to_bytes(x[0])
@@ -121,15 +128,13 @@ class CustomerService:
             transmitter_name_length_b = int_to_bytes(len(transmitter_name_b))
             reference_b = reference.encode(UTF8STR)
             reference_length_b = int_to_bytes(len(reference_b))
-            b += (
-                    transfer_type + transmitter_name_length_b + transmitter_name_b + account_id_b + amount_b + timestamp_b +
-                    reference_length_b + reference_b)
-        b += TERMINATION
+            buf.insert(
+                transfer_type + transmitter_name_length_b + transmitter_name_b + account_id_b + amount_b + timestamp_b +
+                reference_length_b + reference_b)
+        buf.insert(TERMINATION)
+        buf.flush()
+        client.send(int_to_bytes(0))
         self.__db_interface.release_lock()
-
-        client = self.tcp_on_demand(session)
-        client.send(int_to_bytes(len(b)))
-        client.send(b)
         client.close()
 
     def user_exit(self, session):

@@ -1,3 +1,5 @@
+import numpy
+
 from Crypto.Cipher import AES
 from numpy import random
 
@@ -74,4 +76,34 @@ class Slice_Iterator:
 
     def end_reached(self):
         c = self.__counter
-        return self.__data[c:c+4] == TERMINATION
+        return self.__data[c:c + 4] == TERMINATION
+
+
+class ByteBuffer:
+    def __init__(self, size, overflow_function):
+        self.__buffer = b''
+        self.__buffer_pointer = 0
+        self.__overflow_function = overflow_function
+        self.__size = size
+
+    def insert(self, chunk):
+        chunk_pointer = 0
+        while chunk_pointer < len(chunk):
+            remaining_buffer_size = self.__size - self.__buffer_pointer
+            remaining_chunk_size = len(chunk) - chunk_pointer
+
+            if remaining_chunk_size < remaining_buffer_size:
+                self.__buffer += chunk[chunk_pointer:]
+                self.__buffer_pointer += (len(chunk) - chunk_pointer)
+                return
+            else:
+                self.__buffer += chunk[chunk_pointer:chunk_pointer + remaining_buffer_size]
+                chunk_pointer += remaining_buffer_size
+                self.__overflow_function(self.__buffer)
+                self.__buffer_pointer = 0
+                self.__buffer = b''
+
+    def flush(self):
+        self.__overflow_function(self.__buffer[:self.__buffer_pointer])
+        self.__buffer_pointer = 0
+        self.__buffer = b''

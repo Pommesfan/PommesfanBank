@@ -63,9 +63,12 @@ def tcp_on_demand():
 
 
 def receive_turnover():
+    data = b''
     client = tcp_on_demand()
     length = int_from_bytes(client.recv(4))
-    data = client.recv(length)
+    while not length == 0:
+        data += decrypt(client.recv(length), session_key)
+        length = int_from_bytes(client.recv(4))
     client.close()
     return data
 
