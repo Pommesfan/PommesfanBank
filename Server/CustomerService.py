@@ -26,7 +26,7 @@ class CustomerService:
         self.__thread.start()
 
     def send_to_customer(self, paket, session):
-        cipher_paket = encrypt(paket, session.session_key)
+        cipher_paket = encrypt_uneven_block(paket, session.aes)
         self.__customer_socket_write_lock.acquire()
         self.__customer_udp_socket.sendto(cipher_paket, session.ip_and_port)
         self.__customer_socket_write_lock.release()
@@ -52,10 +52,11 @@ class CustomerService:
         user_password = answer[3]
         user_password_b = user_password.encode(UTF8STR)
         key = hashcode(user_password)
-        input_password_b = decrypt(input_password_cipher, key)
+        aes = get_aes(key)
+        input_password_b = aes.decrypt(input_password_cipher)
 
         if user_password_b == input_password_b[:length_of_password]:
-            return answer[0], key, answer[1]
+            return answer[0], aes, answer[1]
         else:
             return None
 
@@ -70,13 +71,14 @@ class CustomerService:
             print("Fehllogin: Nutzer: " + username)
         else:
             customer_id = res[0]
-            key = res[1]
+            aes_from_password = res[1]
             customer_name = res[2]
             print("Nutzer: " + customer_id + " - " + customer_name + " eingeloggt")
             session_id = random.bytes(8)
             session_key = random.bytes(32)
-            session_key_cipher = encrypt(session_key, key)
-            self.__session_list.add(Session(session_id, session_key, customer_id, src))
+            session_key_cipher = aes_from_password.encrypt(session_key)
+            aes = get_aes(session_key)
+            self.__session_list.add(Session(session_id, session_key, customer_id, src, aes))
             bank_information = int_to_bytes(len(self.__CURRENCY_B)) + self.__CURRENCY_B + self.__DECIMAL_PLACE_B
 
             self.__customer_socket_write_lock.acquire()
@@ -112,7 +114,7 @@ class CustomerService:
         client = self.tcp_on_demand(session)
 
         def overflow_function(b):
-            cipher = encrypt(b, session.session_key)
+            cipher = encrypt_uneven_block(b, session.aes)
             client.send(int_to_bytes(len(cipher)))
             client.send(cipher)
 
@@ -171,8 +173,9 @@ class CustomerService:
                     # session was removed due to logout
                     if session is None:
                         continue
+                    aes = session.aes
                     customer_id = session.customer_id
-                    paket = decrypt(paket[12:], session.session_key)
+                    paket = aes.decrypt(paket[12:])
                     banking_command = int_from_bytes(paket[0:4])
                     if banking_command == EXIT_COMMAND:
                         self.user_exit(session)

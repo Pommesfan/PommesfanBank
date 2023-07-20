@@ -37,14 +37,12 @@ def hashcode(v):
     return SHA256.new(v.encode(UTF8STR)).digest()
 
 
-def encrypt(plain, key):
-    obj1 = AES.new(key, AES.MODE_CBC, 'This is an IV456')
-    return obj1.encrypt(plain + random.bytes(number_fill_aes_block_to_16x(len(plain))))
+def encrypt_uneven_block(plain, aes):
+    return aes.encrypt(plain + random.bytes(number_fill_aes_block_to_16x(len(plain))))
 
 
-def decrypt(cipher, key):
-    aes = AES.new(key, AES.MODE_CBC, 'This is an IV456')
-    return aes.decrypt(cipher)
+def get_aes(key):
+    return AES.new(key, AES.MODE_CBC, 'This is an IV456')
 
 
 TERMINATION = int_to_bytes(2147483647)

@@ -10,11 +10,11 @@ serverPort = 20002
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-terminal_key_hash = hashcode(terminal_key)
+aes_terminal = get_aes(hashcode(terminal_key))
 
 
 def send_to_server(paket):
-    cipher_paket = encrypt(paket, terminal_key_hash)
+    cipher_paket = encrypt_uneven_block(paket, aes_terminal)
     UDPClientSocket.sendto(
         int_to_bytes(len(terminal_id_b)) + terminal_id_b + int_to_bytes(len(cipher_paket)) + cipher_paket, dst)
 
@@ -26,7 +26,8 @@ card_id_b = card[:16]
 card_key_cipher = card[16:80]
 print("PIN:")
 pin = input()
-card_key = decrypt(card_key_cipher, hashcode(pin))
+aes_pin = get_aes(hashcode(pin))
+card_key = aes_pin.decrypt(card_key_cipher)
 print("Preis:")
 
 amount_b = int_to_bytes(int(input()))

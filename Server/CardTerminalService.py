@@ -1,7 +1,8 @@
 import traceback
 from threading import Thread
 
-from Utils import Slice_Iterator, UTF8STR, decrypt, hashcode, DEBIT_CARD_PAYMENT
+import Utils
+from Utils import Slice_Iterator, UTF8STR, hashcode, DEBIT_CARD_PAYMENT
 
 
 class CardTerminalService:
@@ -26,8 +27,10 @@ class CardTerminalService:
         terminal_key = terminal[1]
         account_to = terminal[2]
 
+        aes = Utils.get_aes(hashcode(terminal_key))
+
         cipher_paket = s.next_slice()
-        paket = decrypt(cipher_paket, hashcode(terminal_key))
+        paket = aes.decrypt(cipher_paket)
         s = Slice_Iterator(paket)
         card_number = s.get_slice(16)
         card_key_from_paket = s.get_slice(64)
