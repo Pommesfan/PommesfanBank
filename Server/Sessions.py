@@ -4,12 +4,13 @@ import Server.Sessions
 
 
 class Session:
-    def __init__(self, session_id, session_key, customer_id, ip_and_port, aes):
+    def __init__(self, session_id, session_key, customer_id, ip_and_port, aes_e, aes_d):
         self.session_id = session_id
         self.session_key = session_key
         self.customer_id = customer_id
         self.ip_and_port = ip_and_port
-        self.aes = aes
+        self.aes_e = aes_e
+        self.aes_d = aes_d
 
 
 class SessionList:

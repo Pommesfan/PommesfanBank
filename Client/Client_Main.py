@@ -23,8 +23,8 @@ UDPClientSocket.bind((localIP, localPort))  # for docker
 
 # send login paket
 password_hash = hashcode(password)
-aes_from_password = get_aes(password_hash)
-password_cipher = encrypt_uneven_block(password_b, aes_from_password)
+aes_from_password_e, aes_from_password_d = get_aes(password_hash)
+password_cipher = encrypt_uneven_block(password_b, aes_from_password_e)
 paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username_b)) + username.encode(UTF8STR) \
         + int_to_bytes(len(password_b)) + password_cipher
 UDPClientSocket.sendto(paket, dst)
@@ -33,8 +33,8 @@ UDPClientSocket.sendto(paket, dst)
 paket = UDPClientSocket.recv(96)
 s = Slice_Iterator(paket)
 session_id = s.get_slice(8)
-session_key = aes_from_password.decrypt(s.get_slice(32))
-aes = get_aes(session_key)
+session_key = aes_from_password_d.decrypt(s.get_slice(32))
+aes_e, aes_d = get_aes(session_key)
 currency = s.next_slice().decode(UTF8STR)
 decimal_position = s.get_int()
 
@@ -57,7 +57,7 @@ def check_input_amount(amount):
 
 
 def tcp_on_demand():
-    initial_paket = aes.decrypt(UDPClientSocket.recv(16))
+    initial_paket = aes_d.decrypt(UDPClientSocket.recv(16))
     tcp_server_port = int_from_bytes(initial_paket[0:4])
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((serverIP, tcp_server_port))
@@ -69,7 +69,7 @@ def receive_turnover():
     client = tcp_on_demand()
     length = int_from_bytes(client.recv(4))
     while not length == 0:
-        data += aes.decrypt(client.recv(length))
+        data += aes_d.decrypt(client.recv(length))
         length = int_from_bytes(client.recv(4))
     client.close()
     return data
@@ -90,7 +90,7 @@ def print_turnover(turnover_list_b):
 
 
 def send_to_server(paket):
-    cipher_paket = encrypt_uneven_block(paket, aes)
+    cipher_paket = encrypt_uneven_block(paket, aes_e)
     UDPClientSocket.sendto(
         banking_command_b + session_id + cipher_paket, dst)
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
             paket = int_to_bytes(SHOW_BALANCE_COMMAND)
             send_to_server(paket)
             paket = UDPClientSocket.recv(16)
-            amount_b = aes.decrypt(paket)[0:4]
+            amount_b = aes_d.decrypt(paket)[0:4]
             print("Kontostand: " + format_amount(int_from_bytes(amount_b)))
         elif cmd == 3:
             print("Kontonummer/E-Mail-Adresse Empfänger:")

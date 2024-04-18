@@ -27,10 +27,10 @@ class CardTerminalService:
         terminal_key = terminal[1]
         account_to = terminal[2]
 
-        aes = Utils.get_aes(hashcode(terminal_key))
+        aes_e, aes_d = Utils.get_aes(hashcode(terminal_key))
 
         cipher_paket = s.next_slice()
-        paket = aes.decrypt(cipher_paket)
+        paket = aes_d.decrypt(cipher_paket)
         s = Slice_Iterator(paket)
         card_number = s.get_slice(16)
         card_key_from_paket = s.get_slice(64)

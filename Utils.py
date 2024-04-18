@@ -1,3 +1,5 @@
+import copy
+
 import numpy
 
 from Crypto.Cipher import AES
@@ -42,7 +44,8 @@ def encrypt_uneven_block(plain, aes):
 
 
 def get_aes(key):
-    return AES.new(key, AES.MODE_CBC, 'This is an IV456')
+    aes = AES.new(key, AES.MODE_CBC, b'fhs8d9fg845jskd6')
+    return aes, copy.copy(aes)
 
 
 TERMINATION = int_to_bytes(2147483647)
