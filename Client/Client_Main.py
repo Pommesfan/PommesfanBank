@@ -21,20 +21,30 @@ dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.bind((localIP, localPort))  # for docker
 
-# send login paket
+# start login paket
 password_hash = hashcode(password)
 aes_from_password_e, aes_from_password_d = get_aes(password_hash)
-password_cipher = encrypt_uneven_block(password_b, aes_from_password_e)
-paket = int_to_bytes(LOGIN_COMMAND) + int_to_bytes(len(username_b)) + username.encode(UTF8STR) \
-        + int_to_bytes(len(password_b)) + password_cipher
+paket = int_to_bytes(START_LOGIN) + int_to_bytes(len(username_b)) + username.encode(UTF8STR)
 UDPClientSocket.sendto(paket, dst)
 
-# receive session_id and session_cipher
+# receive start login response
 paket = UDPClientSocket.recv(96)
 s = Slice_Iterator(paket)
+bank_information = s.next_slice()
 session_id = s.get_slice(8)
 session_key = aes_from_password_d.decrypt(s.get_slice(32))
 aes_e, aes_d = get_aes(session_key)
+
+# complete login
+password_cipher = encrypt_uneven_block(int_to_bytes(len(password_b)) + password_b, aes_e)
+paket = int_to_bytes(COMPLETE_LOGIN) + session_id + int_to_bytes(len(password_cipher)) + password_cipher
+UDPClientSocket.sendto(paket, dst)
+
+ack = int_from_bytes(UDPClientSocket.recv(4))
+if ack != LOGIN_ACK:
+    exit(1)
+
+s = Slice_Iterator(bank_information)
 currency = s.next_slice().decode(UTF8STR)
 decimal_position = s.get_int()
 

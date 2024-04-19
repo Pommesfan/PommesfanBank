@@ -16,6 +16,7 @@ CURRENCY_B = "EURO".encode(UTF8STR)
 DECIMAL_PLACE_B = int_to_bytes(2)
 
 session_list = SessionList()
+ongoing_session_list = SessionList()
 db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
 
 card_terminal_socket_write_lock = Lock()
@@ -97,6 +98,7 @@ if __name__ == '__main__':
             firstPortTCP + i,
             db_interface,
             session_list,
+            ongoing_session_list,
             __customer_socket_read_lock,
             __customer_socket_write_lock,
             __customer_udp_socket,

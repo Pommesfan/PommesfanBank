@@ -6,14 +6,16 @@ from Utils import *
 
 
 class CustomerService:
-    def __init__(self, tcp_port, dbInterface, sessionList, customer_socket_read_lock, customer_socket_write_lock,
-                 customer_udp_socket, localIP, CURRENCY_B, DECIMAL_PLACE_B, transfer_function):
+    def __init__(self, tcp_port, dbInterface, sessionList, ongoing_session_list, customer_socket_read_lock,
+                 customer_socket_write_lock, customer_udp_socket, localIP, CURRENCY_B, DECIMAL_PLACE_B,
+                 transfer_function):
         self.__tcp_port = tcp_port
         self.__tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__tcp_socket.bind((localIP, tcp_port))
         self.__thread = Thread(target=self.customer_routine)
         self.__db_interface = dbInterface
         self.__session_list = sessionList
+        self.__ongoing_session_list = ongoing_session_list
         self.__customer_socket_read_lock = customer_socket_read_lock
         self.__customer_socket_write_lock = customer_socket_write_lock
         self.__customer_udp_socket = customer_udp_socket
@@ -38,52 +40,56 @@ class CustomerService:
         print(s)
         exit(1)
 
-    def get_customer_from_username(self, username, input_password_cipher, length_of_password):
+    def get_customer_from_username(self, username):
         self.__db_interface.acquire_lock()
         if '@' in username:
             answer = self.__db_interface.query_customer(username, "email")
         else:
             answer = self.__db_interface.query_customer(username, "customer_id")
         self.__db_interface.release_lock()
+        return answer
 
-        if answer is None:
-            return None
-
-        user_password = answer[3]
-        user_password_b = user_password.encode(UTF8STR)
-        key = hashcode(user_password)
-        aes_e, aes_d = get_aes(key)
-        input_password_b = aes_d.decrypt(input_password_cipher)
-
-        if user_password_b == input_password_b[:length_of_password]:
-            return answer[0], (aes_e, aes_d), answer[1]
-        else:
-            return None
-
-    def login(self, paket, src):
+    def start_login(self, paket, src):
         s = Slice_Iterator(paket)
         username = s.next_slice().decode(UTF8STR)
-        length_of_password = int_from_bytes(s.get_slice(4))
-        password_cipher = s.get_slice(length_of_password + number_fill_aes_block_to_16x(length_of_password))
-
-        res = self.get_customer_from_username(username, password_cipher, length_of_password)
+        res = self.get_customer_from_username(username)
         if res is None:
-            print("Fehllogin: Nutzer: " + username)
-        else:
-            customer_id = res[0]
-            aes_from_password_e, aes_from_password_d = res[1]
-            customer_name = res[2]
-            print("Nutzer: " + customer_id + " - " + customer_name + " eingeloggt")
-            session_id = random.bytes(8)
-            session_key = random.bytes(32)
-            session_key_cipher = aes_from_password_e.encrypt(session_key)
-            aes_e, aes_d = get_aes(session_key)
-            self.__session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
-            bank_information = int_to_bytes(len(self.__CURRENCY_B)) + self.__CURRENCY_B + self.__DECIMAL_PLACE_B
+            print("customer id or email '" + username + "' not registered")
+            return
+        customer_id = res[0]
+        session_id = random.bytes(8)
+        session_key = random.bytes(32)
+        aes_e, aes_d = get_aes(session_key)
+        aes_from_password_e, aes_from_password_d = get_aes(hashcode(res[3]))
+        self.__ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
 
+        bank_information_b = int_to_bytes(len(self.__CURRENCY_B)) + self.__CURRENCY_B + self.__DECIMAL_PLACE_B
+        len_bank_information_b = int_to_bytes(len(bank_information_b))
+        paket = len_bank_information_b + bank_information_b + session_id + aes_from_password_e.encrypt(session_key)
+        self.__customer_socket_write_lock.acquire()
+        self.__customer_udp_socket.sendto(paket, src)
+        self.__customer_socket_write_lock.release()
+
+    def complete_login(self, paket, src):
+        s = Slice_Iterator(paket)
+        session_id = s.get_slice(8)
+        password_cipher = s.next_slice()
+        session = self.__ongoing_session_list.get_session_from_id(session_id, src)
+        password_with_len = session.aes_d.decrypt(password_cipher)
+        len_password = int_from_bytes(password_with_len[0:4])
+        password_b = password_with_len[4:4 + len_password]
+        self.__ongoing_session_list.remove_session(session_id)
+        res = self.get_customer_from_username(session.customer_id)
+        customer_password = res[3].encode(UTF8STR)
+        customer_name = res[1]
+        if password_b == customer_password:
+            self.__session_list.add(session)
+            print("Nutzer: " + session.customer_id + " - " + customer_name + " eingeloggt")
             self.__customer_socket_write_lock.acquire()
-            self.__customer_udp_socket.sendto(session_id + session_key_cipher + bank_information, src)
+            self.__customer_udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
             self.__customer_socket_write_lock.release()
+        else:
+            print("Login: " + session.customer_id + " - " + customer_name + " nicht erfolgreich")
 
     def transfer_from_session(self, session, slice_iterator):
         receiver_account_len = int_from_bytes(slice_iterator.get_slice(4))
@@ -166,8 +172,10 @@ class CustomerService:
 
             try:
                 command = int_from_bytes(paket[0:4])
-                if command == LOGIN_COMMAND:
-                    self.login(paket[4:], src)
+                if command == START_LOGIN:
+                    self.start_login(paket[4:], src)
+                elif command == COMPLETE_LOGIN:
+                    self.complete_login(paket[4:], src)
                 elif command == BANKING_COMMAND:
                     session = self.__session_list.get_session_from_id(paket[4:12], src)
                     # session was removed due to logout
