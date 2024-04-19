@@ -6,6 +6,7 @@ from Server.CustomerService import CustomerService
 from Utils import *
 from Sessions import *
 from threading import Thread, Lock
+from datetime import datetime
 
 NUMBER_OF_THREADS = 4
 localIP = "127.0.0.1"
@@ -70,19 +71,35 @@ def create_debit_card(customer_id, pin, path):
 
 
 def transfer(transfer_type, transmitter_account_id, receiver_account_id, amount, reference):
+    timestamp_descriptor = '%Y-%m-%d %H:%M:%S'
     db_interface.acquire_lock()
-    balance_transmitter = db_interface.query_balance(transmitter_account_id)[0]
-    balance_receiver = db_interface.query_balance(receiver_account_id)
-    if amount < 1 or transmitter_account_id == receiver_account_id or balance_receiver is None \
-            or amount > balance_transmitter:
+    daily_closing_transmitter = db_interface.query_daily_closing(transmitter_account_id)
+    daily_closing_receiver = db_interface.query_daily_closing(receiver_account_id)
+    if daily_closing_receiver is None:
+        db_interface.release_lock()
+        return
+    date_daily_closing_transmitter = datetime.strptime(daily_closing_transmitter[3], timestamp_descriptor)
+    date_daily_closing_receiver = datetime.strptime(daily_closing_receiver[3], timestamp_descriptor)
+    balance_transmitter = daily_closing_transmitter[2]
+    balance_receiver = daily_closing_receiver[2]
+    if amount < 1 or transmitter_account_id == receiver_account_id or amount > balance_transmitter:
         db_interface.release_lock()
         return
 
-    balance_receiver = balance_receiver[0]
+    # update daily closing for today or create new
+    now = datetime.now().date()
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    db_interface.transfer(transfer_type, transmitter_account_id, receiver_account_id, new_balance_receiver,
-                          new_balance_transmitter, amount, reference)
+    if date_daily_closing_receiver.date() == now:
+        db_interface.update_daily_closing(receiver_account_id, new_balance_receiver)
+    else:
+        db_interface.create_daily_closing(receiver_account_id, new_balance_receiver)
+    if date_daily_closing_transmitter.date() == now:
+        db_interface.update_daily_closing(transmitter_account_id, new_balance_transmitter)
+    else:
+        db_interface.create_daily_closing(transmitter_account_id, new_balance_transmitter)
+    db_interface.create_transfer(transfer_type, transmitter_account_id, receiver_account_id, new_balance_receiver,
+                                 new_balance_transmitter, amount, reference)
     db_interface.release_lock()
 
 

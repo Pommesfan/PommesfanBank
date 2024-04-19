@@ -57,15 +57,11 @@ class DB_Interface:
         self.con.commit()
         self.release_lock()
 
-    def transfer(self, transfer_type, transmitter_account_id, target_account_id, new_balance_receiver,
-                 new_balance_transmitter, amount, reference):
-        self.con.execute("update account set balance = " + str(new_balance_transmitter)
-                         + " where account_id = '" + transmitter_account_id + "';")
-        self.con.execute("update account set balance = " + str(new_balance_receiver)
-                         + " where account_id = '" + target_account_id + "';")
-        self.con.execute("insert into transfer values(NULL, '"+ str(transfer_type) + "', '" + transmitter_account_id +
+    def create_transfer(self, transfer_type, transmitter_account_id, target_account_id, new_balance_receiver,
+                        new_balance_transmitter, amount, reference):
+        self.con.execute("insert into transfer values(NULL, '" + str(transfer_type) + "', '" + transmitter_account_id +
                          "', '" + target_account_id + "', " + str(amount) + ", (select datetime('now', 'localtime')), '"
-                         + reference + "', " + str(new_balance_transmitter) + ", " + str(new_balance_receiver) + ");")
+                         + reference + "');")
         self.con.commit()
 
     def query_turnover(self, account_id):
@@ -81,7 +77,11 @@ class DB_Interface:
         return self.query_first_item("select * from customer where " + attribute + " = '" + argument + "'")
 
     def query_balance(self, account_id):
-        return self.query_first_item("select balance from account where account_id = '" + account_id + "'")
+        return self.query_first_item("select balance from daily_closing where account_id = '" + account_id +
+                                     "' order by date desc")
+
+    def query_daily_closing(self, account_id):
+        return self.query_first_item("select * from daily_closing where account_id = '" + account_id + "'")
 
     def query_customer_name(self, customer_id):
         return self.query_first_item("select customer_name from customer where customer_id = '" + customer_id + "'")
@@ -96,3 +96,11 @@ class DB_Interface:
     def query_account_to_card(self, card_number):
         return self.query_first_item("""select a.account_id, d.card_key from debit_card d inner join account a on
         d.customer_id = a.customer_id where d.card_number = '""" + card_number + "';")
+
+    def create_daily_closing(self, account_id, new_balance):
+        self.con.execute("""insert into daily_closing values(NULL, ?, ?,(select datetime('now', 'localtime')))""",
+                         (account_id, new_balance))
+
+    def update_daily_closing(self, account_id, new_balance):
+        self.con.execute("update daily_closing set balance = " + str(new_balance)
+                         + " where account_id = '" + account_id + "';")
