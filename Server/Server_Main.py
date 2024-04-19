@@ -15,7 +15,7 @@ local_port_terminal = 20002
 firstPortTCP = 20010
 CURRENCY_B = "EURO".encode(UTF8STR)
 DECIMAL_PLACE_B = int_to_bytes(2)
-
+today = datetime.now().date()
 session_list = SessionList()
 ongoing_session_list = SessionList()
 db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
@@ -87,14 +87,13 @@ def transfer(transfer_type, transmitter_account_id, receiver_account_id, amount,
         return
 
     # update daily closing for today or create new
-    now = datetime.now().date()
     new_balance_receiver = balance_receiver + amount
     new_balance_transmitter = balance_transmitter - amount
-    if date_daily_closing_receiver.date() == now:
+    if date_daily_closing_receiver.date() == today:
         db_interface.update_daily_closing(receiver_account_id, new_balance_receiver)
     else:
         db_interface.create_daily_closing(receiver_account_id, new_balance_receiver)
-    if date_daily_closing_transmitter.date() == now:
+    if date_daily_closing_transmitter.date() == today:
         db_interface.update_daily_closing(transmitter_account_id, new_balance_transmitter)
     else:
         db_interface.create_daily_closing(transmitter_account_id, new_balance_transmitter)
