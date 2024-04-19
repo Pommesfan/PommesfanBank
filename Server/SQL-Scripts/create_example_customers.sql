@@ -18,6 +18,7 @@ insert into daily_closing values(NULL, '26684521', 36187, (select datetime('now'
 --Unternehmenskonto
 insert into customer values ('76547564', 'Supermarkt Entenhausen', 'info@supermarkt-entenhausen.de', 'haha');
 insert into account values ('98751544', '76547564');
+insert into daily_closing values(NULL, '98751544', 4523691, (select datetime('now', 'localtime')));
 
 --Kartenterminal
 insert into terminal values('4894d56d4ztr8dt6z7', 'redfg465sdg564er89', '98751544');
