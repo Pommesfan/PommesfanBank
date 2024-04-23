@@ -4,7 +4,7 @@ EXPOSE 20010/tcp
 EXPOSE 20011/tcp
 EXPOSE 20012/tcp
 EXPOSE 20013/tcp
-RUN pip install pycrypto
+RUN pip install pycryptodome
 RUN pip install numpy
 COPY Server/SQL-Scripts/create_tables.sql Server/SQL-Scripts/create_tables.sql
 COPY Server/SQL-Scripts/create_example_customers.sql Server/SQL-Scripts/create_example_customers.sql

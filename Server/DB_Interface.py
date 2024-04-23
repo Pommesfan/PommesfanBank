@@ -21,13 +21,13 @@ class DB_Interface:
         self.con.close()
 
     def __init_database__(self):
-        f = open("/home/johannes/Programming/PommesfanBank/Server/SQL-Scripts/create_tables.sql")
+        f = open("SQL-Scripts/create_tables.sql")
         self.con.executescript(f.read())
         self.con.commit()
         self.add_example_customers()
 
     def add_example_customers(self):
-        f = open("/home/johannes/Programming/PommesfanBank/Server/SQL-Scripts/create_example_customers.sql")
+        f = open("SQL-Scripts/create_example_customers.sql")
         self.con.executescript(f.read())
         self.con.commit()
 
@@ -46,8 +46,10 @@ class DB_Interface:
         self.acquire_lock()
         self.con.execute("insert into customer values ('" + customer_id + "', '" + name + "', '" + email +
                          "', '" + password + "');")
-        self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "', " + str(balance) +
-                         ");")
+        self.con.execute("insert into account values ('" + account_id + "', '" + customer_id + "');")
+        self.con.execute("insert into daily_closing values(NULL, '" + account_id + "', " + str(balance) +
+                         ",(select datetime('now', 'localtime')))")
+        self.con.commit()
         self.release_lock()
 
     def set_up_debit_card(self, customer_id, debit_card_number, debit_card_key):
