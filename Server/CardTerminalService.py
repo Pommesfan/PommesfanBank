@@ -1,5 +1,4 @@
 import traceback
-import Utils
 from Utils import *
 from BankService import BankService
 
@@ -28,25 +27,18 @@ class CardTerminalService(BankService):
             return terminal_id, terminal_key_b
         self.complete_login(paket, src, query_function)
 
-    def __transfer_from_debit_card(self, paket):
-        s = SliceIterator(paket)
-        terminal_id = s.next_slice().decode(UTF8STR)
-        terminal = self._db_interface.query_terminal(terminal_id)
-
-        if terminal is None:
-            return
-
-        terminal_key = terminal[1]
+    def __transfer_from_debit_card(self, cipher_paket, session):
+        paket = session.aes_d.decrypt(cipher_paket)
+        terminal = self._db_interface.query_terminal(session.customer_id)
         account_to = terminal[2]
 
-        aes_e, aes_d = Utils.get_aes(hashcode(terminal_key))
-
-        cipher_paket = s.next_slice()
-        paket = aes_d.decrypt(cipher_paket)
         s = SliceIterator(paket)
         card_number = s.get_slice(16)
         card_key_from_paket = s.get_slice(64)
+        amount = s.get_int()
+        reference = s.next_slice().decode(UTF8STR)
         res = self._db_interface.query_account_to_card(card_number.decode(UTF8STR))
+
         if res is None:
             return
         else:
@@ -54,9 +46,8 @@ class CardTerminalService(BankService):
             card_key_from_db = res[1]
 
         if card_key_from_db != card_key_from_paket:
+            print("Kartenzahlung nicht erfolgreich")
             return
-        amount = s.get_int()
-        reference = s.next_slice().decode(UTF8STR)
 
         self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference)
 
@@ -71,6 +62,9 @@ class CardTerminalService(BankService):
                     self.__start_login(paket[4:], src)
                 elif command == COMPLETE_LOGIN:
                     self.__complete_login(paket[4:], src)
+                elif command == CARD_PAYMENT_COMMAND:
+                    session = self._session_list.get_session_from_id(paket[4:12], src)
+                    self.__transfer_from_debit_card(paket[12:], session)
             except:
                 traceback.print_exc()
 

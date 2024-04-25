@@ -16,10 +16,10 @@ class CardTerminalClient(BankClient):
         self.aes_e = aes_e
         self.aes_d = aes_d
 
-    def send_to_server(self, paket):
+    def send_to_server(self, banking_command_b, paket):
         cipher_paket = encrypt_uneven_block(paket, self.aes_e)
         self.udp_socket.sendto(
-            int_to_bytes(len(self.terminal_id_b)) + self.terminal_id_b + int_to_bytes(len(cipher_paket)) + cipher_paket, self.dst)
+            banking_command_b + self.session_id + cipher_paket, self.dst)
 
     def routine(self):
         print("Pfad Karte:")
@@ -29,7 +29,7 @@ class CardTerminalClient(BankClient):
         card_key_cipher = card[16:80]
         print("PIN:")
         pin = input()
-        aes_pin_e, aes_pin_d = get_aes(hashcode(pin))
+        aes_pin_e, aes_pin_d = get_aes(hashcode(pin.encode(UTF8STR)))
         card_key = aes_pin_d.decrypt(card_key_cipher)
         print("Preis:")
 
@@ -39,7 +39,7 @@ class CardTerminalClient(BankClient):
         len_refenrence_b = int_to_bytes(len(reference_b))
 
         paket = card_id_b + card_key + amount_b + len_refenrence_b + reference_b
-        self.send_to_server(paket)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
 
 
 terminal_id_b = '4894d56d4ztr8dt6z7'.encode(UTF8STR)
