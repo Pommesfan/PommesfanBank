@@ -18,6 +18,8 @@ DECIMAL_PLACE_B = int_to_bytes(2)
 today = datetime.now().date()
 session_list = SessionList()
 ongoing_session_list = SessionList()
+session_list_card_terminal = SessionList()
+ongoing_session_list_card_terminal = SessionList()
 db_interface = DB_Interface("./Pommesfan_Bank_DB.db")
 
 card_terminal_socket_write_lock = Lock()
@@ -128,5 +130,6 @@ if __name__ == '__main__':
     terminal_udp_socket.bind((localIP, local_port_terminal))
     card_terminal_socket_read_lock = Lock()
 
-    CardTerminalService(db_interface, transfer, terminal_udp_socket, card_terminal_socket_read_lock).start()
+    CardTerminalService(db_interface, transfer, terminal_udp_socket, card_terminal_socket_read_lock,
+                        session_list_card_terminal, ongoing_session_list).start()
     Thread(target=routine_server_terminal).start()
