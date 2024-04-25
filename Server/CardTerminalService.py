@@ -4,7 +4,8 @@ from BankService import BankService
 
 
 class CardTerminalService(BankService):
-    def __init__(self, db_interface, transfer_function, udp_socket, read_lock, write_lock, session_list, ongoing_session_list,
+    def __init__(self, db_interface, transfer_function, udp_socket, read_lock, write_lock, session_list,
+                 ongoing_session_list,
                  CURRENCY_B, DECIMAL_PLACE_B):
         super().__init__(db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
                          CURRENCY_B, DECIMAL_PLACE_B, read_lock, write_lock, self.card_terminal_routine)
@@ -13,11 +14,12 @@ class CardTerminalService(BankService):
         def query_function(terminal_id):
             res = self._db_interface.query_terminal(terminal_id)
             if res is None:
-                print("terminal '" + terminal_id + "' not registered")
+                print("Terminal '" + terminal_id + "' nicht registriert")
                 return None, None
             else:
                 terminal_key_b = res[1].encode(UTF8STR)
                 return terminal_id, terminal_key_b
+
         self.start_login(paket, src, query_function)
 
     def __complete_login(self, paket, src):
@@ -25,7 +27,16 @@ class CardTerminalService(BankService):
             res = self._db_interface.query_terminal(terminal_id)
             terminal_key_b = res[1].encode(UTF8STR)
             return terminal_id, terminal_key_b
-        self.complete_login(paket, src, query_function)
+
+        def message_function(user_id, success):
+            msg = "Login Terminal: '" + user_id
+            if success:
+                msg += "' erfolgreich"
+            else:
+                msg += "' nicht erfolgreich"
+            print(msg)
+
+        self.complete_login(paket, src, query_function, message_function)
 
     def __transfer_from_debit_card(self, cipher_paket, session):
         paket = session.aes_d.decrypt(cipher_paket)
@@ -67,4 +78,3 @@ class CardTerminalService(BankService):
                     self.__transfer_from_debit_card(paket[12:], session)
             except:
                 traceback.print_exc()
-

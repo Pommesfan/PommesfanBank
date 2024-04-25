@@ -42,13 +42,14 @@ class CustomerService(BankService):
         def query_function(username):
             res = self.get_customer_from_username(username)
             if res is None:
-                print("customer id or email '" + username + "' not registered")
+                print("Kundennummer oder E-Mail '" + username + "' nicht registriert")
                 return None, None
             else:
                 customer_id = res[0]
                 customer_password_b = res[3].encode(UTF8STR)
                 return customer_id, customer_password_b
-        super().start_login(paket, src,  query_function)
+
+        super().start_login(paket, src, query_function)
 
     def __complete_login(self, paket, src):
         def query_function(customer_id):
@@ -56,7 +57,16 @@ class CustomerService(BankService):
             customer_name = res[1]
             customer_password_b = res[3].encode(UTF8STR)
             return customer_name, customer_password_b
-        super().complete_login(paket, src, query_function)
+
+        def message_function(user, success):
+            msg = "Login Nutzer: '" + user + "' - '" + self._db_interface.query_customer(user, "customer_id")[1]
+            if success:
+                msg += "' erfolgreich"
+            else:
+                msg += "' nicht erfolgreich"
+            print(msg)
+
+        super().complete_login(paket, src, query_function, message_function)
 
     def transfer_from_session(self, session, slice_iterator):
         receiver_account_len = int_from_bytes(slice_iterator.get_slice(4))

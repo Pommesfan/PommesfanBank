@@ -40,7 +40,7 @@ class BankService:
         self._udp_socket.sendto(paket, src)
         self._write_lock.release()
 
-    def complete_login(self, paket, src, query_function):
+    def complete_login(self, paket, src, query_function, message_function):
         s = SliceIterator(paket)
         session_id = s.get_slice(8)
         password_cipher = s.next_slice()
@@ -52,12 +52,13 @@ class BankService:
         name, password_b_client = query_function(session.customer_id)
         if password_b == password_b_client:
             self._session_list.add(session)
-            print("Nutzer: " + session.customer_id + " - " + name + " eingeloggt")
+            message_function(session.customer_id, True)
             self._write_lock.acquire()
             self._udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
             self._write_lock.release()
         else:
-            print("Login: " + session.customer_id + " - " + name + " nicht erfolgreich")
+            message_function(session.customer_id, False)
+
 
 
 class BankClient:
