@@ -60,7 +60,7 @@ def create_number(length):
     return s
 
 
-class Slice_Iterator:
+class SliceIterator:
     def __init__(self, data, counter=0):
         self.__counter = counter
         self.__data = data

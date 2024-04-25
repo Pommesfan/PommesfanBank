@@ -18,7 +18,7 @@ class CustomerClient(BankClient):
         self.session_id = session_id
         self.aes_e = aes_e
         self.aes_d = aes_d
-        s = Slice_Iterator(bank_information)
+        s = SliceIterator(bank_information)
         self.currency = s.next_slice().decode(UTF8STR)
         self.decimal_position = s.get_int()
 
@@ -54,7 +54,7 @@ class CustomerClient(BankClient):
         return data
 
     def print_turnover(self, turnover_list_b):
-        s = Slice_Iterator(turnover_list_b)
+        s = SliceIterator(turnover_list_b)
         while not s.end_reached():
             transfer_type = s.get_int()
             transmitter_name = s.next_slice().decode(UTF8STR)

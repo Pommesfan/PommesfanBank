@@ -40,12 +40,22 @@ class CustomerService(BankService):
 
     def __start_login(self, paket, src):
         def query_function(username):
-            return self.get_customer_from_username(username)
+            res = self.get_customer_from_username(username)
+            if res is None:
+                print("customer id or email '" + username + "' not registered")
+                return None, None
+            else:
+                customer_id = res[0]
+                customer_password_b = res[3].encode(UTF8STR)
+                return customer_id, customer_password_b
         super().start_login(paket, src,  query_function)
 
     def __complete_login(self, paket, src):
         def query_function(customer_id):
-            return self.get_customer_from_username(customer_id)
+            res = self._db_interface.query_customer(customer_id, "customer_id")
+            customer_name = res[1]
+            customer_password_b = res[3].encode(UTF8STR)
+            return customer_name, customer_password_b
         super().complete_login(paket, src, query_function)
 
     def transfer_from_session(self, session, slice_iterator):
@@ -146,7 +156,7 @@ class CustomerService(BankService):
                     elif banking_command == SHOW_BALANCE_COMMAND:
                         self.show_balance(session)
                     elif banking_command == TRANSFER_COMMAND:
-                        s = Slice_Iterator(paket, counter=4)
+                        s = SliceIterator(paket, counter=4)
                         self.transfer_from_session(session, s)
                     elif banking_command == SEE_TURNOVER:
                         self.resume_turnover(customer_id, session)

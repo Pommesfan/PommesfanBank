@@ -22,17 +22,14 @@ class BankService:
         self._thread.start()
 
     def start_login(self, paket, src, query_function):
-        s = Slice_Iterator(paket)
+        s = SliceIterator(paket)
         username = s.next_slice().decode(UTF8STR)
-        res = query_function(username)
-        if res is None:
-            print("customer id or email '" + username + "' not registered")
+        customer_id, password_b = query_function(username)
+        if customer_id is None:
             return
-        customer_id = res[0]
         session_id = random.bytes(8)
         session_key = random.bytes(32)
         aes_e, aes_d = get_aes(session_key)
-        password_b = res[3].encode(UTF8STR)
         aes_from_password_e, aes_from_password_d = get_aes(hashcode(password_b))
         self._ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
 
@@ -44,7 +41,7 @@ class BankService:
         self._write_lock.release()
 
     def complete_login(self, paket, src, query_function):
-        s = Slice_Iterator(paket)
+        s = SliceIterator(paket)
         session_id = s.get_slice(8)
         password_cipher = s.next_slice()
         session = self._ongoing_session_list.get_session_from_id(session_id, src)
@@ -52,17 +49,15 @@ class BankService:
         len_password = int_from_bytes(password_with_len[0:4])
         password_b = password_with_len[4:4 + len_password]
         self._ongoing_session_list.remove_session(session_id)
-        res = query_function(session.customer_id)
-        customer_password = res[3].encode(UTF8STR)
-        customer_name = res[1]
-        if password_b == customer_password:
+        name, password_b_client = query_function(session.customer_id)
+        if password_b == password_b_client:
             self._session_list.add(session)
-            print("Nutzer: " + session.customer_id + " - " + customer_name + " eingeloggt")
+            print("Nutzer: " + session.customer_id + " - " + name + " eingeloggt")
             self._write_lock.acquire()
             self._udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
             self._write_lock.release()
         else:
-            print("Login: " + session.customer_id + " - " + customer_name + " nicht erfolgreich")
+            print("Login: " + session.customer_id + " - " + name + " nicht erfolgreich")
 
 
 class BankClient:
@@ -79,7 +74,7 @@ class BankClient:
 
         # receive start login response
         paket = self.udp_socket.recv(96)
-        s = Slice_Iterator(paket)
+        s = SliceIterator(paket)
         bank_information = s.next_slice()
         session_id = s.get_slice(8)
         session_key = aes_from_password_d.decrypt(s.get_slice(32))

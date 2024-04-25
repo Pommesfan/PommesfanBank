@@ -131,5 +131,6 @@ if __name__ == '__main__':
     card_terminal_socket_read_lock = Lock()
 
     CardTerminalService(db_interface, transfer, terminal_udp_socket, card_terminal_socket_read_lock,
-                        session_list_card_terminal, ongoing_session_list, CURRENCY_B, DECIMAL_PLACE_B).start()
+                        card_terminal_socket_write_lock, session_list_card_terminal, ongoing_session_list, CURRENCY_B,
+                        DECIMAL_PLACE_B).start()
     Thread(target=routine_server_terminal).start()
