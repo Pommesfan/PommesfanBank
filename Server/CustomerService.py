@@ -1,6 +1,5 @@
 import socket
 import traceback
-from threading import Thread
 from Server.BankService import BankService
 from Utils import *
 

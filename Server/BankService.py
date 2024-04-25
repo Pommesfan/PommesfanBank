@@ -66,8 +66,9 @@ class BankService:
 
 
 class BankClient:
-    def __init__(self, udp_socket):
+    def __init__(self, udp_socket, dst):
         self.udp_socket = udp_socket
+        self.dst = dst
 
     def login(self, username_b, password_b, dst):
         # start login paket

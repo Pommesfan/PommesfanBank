@@ -5,25 +5,12 @@ from Utils import *
 import re
 
 TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]
-serverIP = "127.0.0.1"
-serverPort = 20001
-
-localIP = "127.0.0.2"
-localPort = 20002
-
-print("Kundennummer oder E-Mail-Adresse eingeben:")
-username = input()
-print("Passwort eingeben:")
-password = input()
-
-dst = (serverIP, serverPort)
-UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-UDPClientSocket.bind((localIP, localPort))  # for docker
 
 
-class Customer_Client(BankClient):
-    def __init__(self, udp_socket, dst):
-        super().__init__(udp_socket)
+class CustomerClient(BankClient):
+    def __init__(self, server_ip, udp_socket, dst, username, password):
+        super().__init__(udp_socket, dst)
+        self.server_ip = server_ip
         username_b = username.encode(UTF8STR)
         password_b = password.encode(UTF8STR)
         bank_information, session_id, aes_e, aes_d = self.login(username_b, password_b, dst)
@@ -50,10 +37,10 @@ class Customer_Client(BankClient):
             return -1
 
     def tcp_on_demand(self):
-        initial_paket = self.aes_d.decrypt(UDPClientSocket.recv(16))
+        initial_paket = self.aes_d.decrypt(self.udp_socket.recv(16))
         tcp_server_port = int_from_bytes(initial_paket[0:4])
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((serverIP, tcp_server_port))
+        client.connect((self.server_ip, tcp_server_port))
         return client
 
     def receive_turnover(self):
@@ -82,8 +69,8 @@ class Customer_Client(BankClient):
 
     def send_to_server(self, banking_command_b, paket):
         cipher_paket = encrypt_uneven_block(paket, self.aes_e)
-        UDPClientSocket.sendto(
-            banking_command_b + self.session_id + cipher_paket, dst)
+        self.udp_socket.sendto(
+            banking_command_b + self.session_id + cipher_paket, self.dst)
 
     def routine(self):
         while True:
@@ -97,7 +84,7 @@ class Customer_Client(BankClient):
             elif cmd == 2:
                 paket = int_to_bytes(SHOW_BALANCE_COMMAND)
                 self.send_to_server(banking_command_b, paket)
-                paket = UDPClientSocket.recv(16)
+                paket = self.udp_socket.recv(16)
                 amount_b = self.aes_d.decrypt(paket)[0:4]
                 print("Kontostand: " + self.format_amount(int_from_bytes(amount_b)))
             elif cmd == 3:
@@ -123,4 +110,15 @@ class Customer_Client(BankClient):
                 self.print_turnover(turnover_list_b)
 
 
-Customer_Client(UDPClientSocket, dst).routine()
+serverIP = "127.0.0.1"
+serverPort = 20001
+localIP = "127.0.0.2"
+localPort = 20002
+print("Kundennummer oder E-Mail-Adresse eingeben:")
+username = input()
+print("Passwort eingeben:")
+password = input()
+dst = (serverIP, serverPort)
+UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+UDPClientSocket.bind((localIP, localPort))  # for docker
+CustomerClient(serverIP, UDPClientSocket, dst, username, password).routine()

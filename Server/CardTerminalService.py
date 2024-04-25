@@ -1,7 +1,6 @@
 import traceback
-from threading import Thread
 import Utils
-from Utils import Slice_Iterator, UTF8STR, hashcode, DEBIT_CARD_PAYMENT
+from Utils import *
 from BankService import BankService
 
 
@@ -49,6 +48,10 @@ class CardTerminalService(BankService):
                 self._read_lock.acquire()
                 paket, src = self._udp_socket.recvfrom(1024)
                 self._read_lock.release()
-                self.__transfer_from_debit_card(paket)
+                command = int_from_bytes(paket[0:4])
+                if command == START_LOGIN:
+                    self.__start_login(paket[4:], src)
+                elif command == COMPLETE_LOGIN:
+                    self.__complete_login(paket[4:], src)
             except:
                 traceback.print_exc()
