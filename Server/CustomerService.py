@@ -9,16 +9,13 @@ class CustomerService(BankService):
     def __init__(self, tcp_port, db_interface, session_list, ongoing_session_list, customer_socket_read_lock,
                  customer_socket_write_lock, udp_socket, localIP, CURRENCY_B, DECIMAL_PLACE_B,
                  transfer_function):
-        thread = Thread(target=self.customer_routine)
-        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
-                         CURRENCY_B, DECIMAL_PLACE_B, customer_socket_read_lock, customer_socket_write_lock)
+        super().__init__(db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
+                         CURRENCY_B, DECIMAL_PLACE_B, customer_socket_read_lock, customer_socket_write_lock,
+                         self.customer_routine)
         self.__tcp_port = tcp_port
         self.__tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__tcp_socket.bind((localIP, tcp_port))
         self.__localIP = localIP
-
-    def start(self):
-        self._thread.start()
 
     def send_to_customer(self, paket, session):
         cipher_paket = encrypt_uneven_block(paket, session.aes_e)
@@ -42,12 +39,12 @@ class CustomerService(BankService):
         self._db_interface.release_lock()
         return answer
 
-    def start_login(self, paket, src):
+    def __start_login(self, paket, src):
         def query_function(username):
             return self.get_customer_from_username(username)
         super().start_login(paket, src,  query_function)
 
-    def complete_login(self, paket, src):
+    def __complete_login(self, paket, src):
         def query_function(customer_id):
             return self.get_customer_from_username(customer_id)
         super().complete_login(paket, src, query_function)
@@ -134,9 +131,9 @@ class CustomerService(BankService):
             try:
                 command = int_from_bytes(paket[0:4])
                 if command == START_LOGIN:
-                    self.start_login(paket[4:], src)
+                    self.__start_login(paket[4:], src)
                 elif command == COMPLETE_LOGIN:
-                    self.complete_login(paket[4:], src)
+                    self.__complete_login(paket[4:], src)
                 elif command == BANKING_COMMAND:
                     session = self._session_list.get_session_from_id(paket[4:12], src)
                     # session was removed due to logout

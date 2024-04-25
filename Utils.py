@@ -38,7 +38,7 @@ def number_fill_aes_block_to_16x(password_length):
 
 def hashcode(v):
     from Crypto.Hash import SHA256
-    return SHA256.new(v.encode(UTF8STR)).digest()
+    return SHA256.new(v).digest()
 
 
 def encrypt_uneven_block(plain, aes):

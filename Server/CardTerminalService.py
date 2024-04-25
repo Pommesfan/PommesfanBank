@@ -8,12 +8,8 @@ from BankService import BankService
 class CardTerminalService(BankService):
     def __init__(self, db_interface, transfer_function, udp_socket, read_lock, session_list, ongoing_session_list,
                  CURRENCY_B, DECIMAL_PLACE_B):
-        thread = Thread(target=self.card_terminal_routine)
-        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
-                         CURRENCY_B, DECIMAL_PLACE_B, read_lock, None)
-
-    def start(self):
-        self._thread.start()
+        super().__init__(db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
+                         CURRENCY_B, DECIMAL_PLACE_B, read_lock, None, self.card_terminal_routine)
 
     def __transfer_from_debit_card(self, paket):
         s = Slice_Iterator(paket)

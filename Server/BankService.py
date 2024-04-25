@@ -1,11 +1,12 @@
+from threading import Thread
+
 from Server.Sessions import Session
 from Utils import *
 
 
 class BankService:
-    def __init__(self, thread, db_interface, transfer_function, udp_socket, sessionList, ongoing_session_list,
-                 CURRENCY_B, DECIMAL_PLACE_B, read_lock, write_lock):
-        self._thread = thread
+    def __init__(self, db_interface, transfer_function, udp_socket, sessionList, ongoing_session_list,
+                 CURRENCY_B, DECIMAL_PLACE_B, read_lock, write_lock, routine):
         self._db_interface = db_interface
         self._transfer_function = transfer_function
         self._udp_socket = udp_socket
@@ -15,6 +16,10 @@ class BankService:
         self._DECIMAL_PLACE_B = DECIMAL_PLACE_B
         self._read_lock = read_lock
         self._write_lock = write_lock
+        self._thread = Thread(target=routine)
+
+    def start(self):
+        self._thread.start()
 
     def start_login(self, paket, src, query_function):
         s = Slice_Iterator(paket)
@@ -27,7 +32,8 @@ class BankService:
         session_id = random.bytes(8)
         session_key = random.bytes(32)
         aes_e, aes_d = get_aes(session_key)
-        aes_from_password_e, aes_from_password_d = get_aes(hashcode(res[3]))
+        password_b = res[3].encode(UTF8STR)
+        aes_from_password_e, aes_from_password_d = get_aes(hashcode(password_b))
         self._ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
 
         bank_information_b = int_to_bytes(len(self._CURRENCY_B)) + self._CURRENCY_B + self._DECIMAL_PLACE_B
@@ -57,3 +63,33 @@ class BankService:
             self._write_lock.release()
         else:
             print("Login: " + session.customer_id + " - " + customer_name + " nicht erfolgreich")
+
+
+class BankClient:
+    def __init__(self, udp_socket):
+        self.udp_socket = udp_socket
+
+    def login(self, username_b, password_b, dst):
+        # start login paket
+        password_hash = hashcode(password_b)
+        aes_from_password_e, aes_from_password_d = get_aes(password_hash)
+        paket = int_to_bytes(START_LOGIN) + int_to_bytes(len(username_b)) + username_b
+        self.udp_socket.sendto(paket, dst)
+
+        # receive start login response
+        paket = self.udp_socket.recv(96)
+        s = Slice_Iterator(paket)
+        bank_information = s.next_slice()
+        session_id = s.get_slice(8)
+        session_key = aes_from_password_d.decrypt(s.get_slice(32))
+        aes_e, aes_d = get_aes(session_key)
+
+        # complete login
+        password_cipher = encrypt_uneven_block(int_to_bytes(len(password_b)) + password_b, aes_e)
+        paket = int_to_bytes(COMPLETE_LOGIN) + session_id + int_to_bytes(len(password_cipher)) + password_cipher
+        self.udp_socket.sendto(paket, dst)
+
+        ack = int_from_bytes(self.udp_socket.recv(4))
+        if ack != LOGIN_ACK:
+            exit(1)
+        return bank_information, session_id, aes_e, aes_d
