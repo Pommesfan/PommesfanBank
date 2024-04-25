@@ -2,7 +2,6 @@ import socket
 import traceback
 from threading import Thread
 from Server.BankService import BankService
-from Server.Sessions import Session
 from Utils import *
 
 
@@ -11,24 +10,21 @@ class CustomerService(BankService):
                  customer_socket_write_lock, udp_socket, localIP, CURRENCY_B, DECIMAL_PLACE_B,
                  transfer_function):
         thread = Thread(target=self.customer_routine)
-        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list)
+        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
+                         CURRENCY_B, DECIMAL_PLACE_B, customer_socket_read_lock, customer_socket_write_lock)
         self.__tcp_port = tcp_port
         self.__tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__tcp_socket.bind((localIP, tcp_port))
-        self.__customer_socket_read_lock = customer_socket_read_lock
-        self.__customer_socket_write_lock = customer_socket_write_lock
         self.__localIP = localIP
-        self.__CURRENCY_B = CURRENCY_B
-        self.__DECIMAL_PLACE_B = DECIMAL_PLACE_B
 
     def start(self):
         self._thread.start()
 
     def send_to_customer(self, paket, session):
         cipher_paket = encrypt_uneven_block(paket, session.aes_e)
-        self.__customer_socket_write_lock.acquire()
+        self._write_lock.acquire()
         self._udp_socket.sendto(cipher_paket, session.ip_and_port)
-        self.__customer_socket_write_lock.release()
+        self._write_lock.release()
 
     def error(self, s):
         self._db_interface.acquire_lock()
@@ -47,46 +43,14 @@ class CustomerService(BankService):
         return answer
 
     def start_login(self, paket, src):
-        s = Slice_Iterator(paket)
-        username = s.next_slice().decode(UTF8STR)
-        res = self.get_customer_from_username(username)
-        if res is None:
-            print("customer id or email '" + username + "' not registered")
-            return
-        customer_id = res[0]
-        session_id = random.bytes(8)
-        session_key = random.bytes(32)
-        aes_e, aes_d = get_aes(session_key)
-        aes_from_password_e, aes_from_password_d = get_aes(hashcode(res[3]))
-        self._ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
-
-        bank_information_b = int_to_bytes(len(self.__CURRENCY_B)) + self.__CURRENCY_B + self.__DECIMAL_PLACE_B
-        len_bank_information_b = int_to_bytes(len(bank_information_b))
-        paket = len_bank_information_b + bank_information_b + session_id + aes_from_password_e.encrypt(session_key)
-        self.__customer_socket_write_lock.acquire()
-        self._udp_socket.sendto(paket, src)
-        self.__customer_socket_write_lock.release()
+        def query_function(username):
+            return self.get_customer_from_username(username)
+        super().start_login(paket, src,  query_function)
 
     def complete_login(self, paket, src):
-        s = Slice_Iterator(paket)
-        session_id = s.get_slice(8)
-        password_cipher = s.next_slice()
-        session = self._ongoing_session_list.get_session_from_id(session_id, src)
-        password_with_len = session.aes_d.decrypt(password_cipher)
-        len_password = int_from_bytes(password_with_len[0:4])
-        password_b = password_with_len[4:4 + len_password]
-        self._ongoing_session_list.remove_session(session_id)
-        res = self.get_customer_from_username(session.customer_id)
-        customer_password = res[3].encode(UTF8STR)
-        customer_name = res[1]
-        if password_b == customer_password:
-            self._session_list.add(session)
-            print("Nutzer: " + session.customer_id + " - " + customer_name + " eingeloggt")
-            self.__customer_socket_write_lock.acquire()
-            self._udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
-            self.__customer_socket_write_lock.release()
-        else:
-            print("Login: " + session.customer_id + " - " + customer_name + " nicht erfolgreich")
+        def query_function(customer_id):
+            return self.get_customer_from_username(customer_id)
+        super().complete_login(paket, src, query_function)
 
     def transfer_from_session(self, session, slice_iterator):
         receiver_account_len = int_from_bytes(slice_iterator.get_slice(4))
@@ -163,9 +127,9 @@ class CustomerService(BankService):
 
     def customer_routine(self):
         while True:
-            self.__customer_socket_read_lock.acquire()
+            self._read_lock.acquire()
             paket, src = self._udp_socket.recvfrom(1024)
-            self.__customer_socket_read_lock.release()
+            self._read_lock.release()
 
             try:
                 command = int_from_bytes(paket[0:4])

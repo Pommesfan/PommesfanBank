@@ -6,10 +6,11 @@ from BankService import BankService
 
 
 class CardTerminalService(BankService):
-    def __init__(self, db_interface, transfer_function, udp_socket, read_lock, session_list, ongoing_session_list):
+    def __init__(self, db_interface, transfer_function, udp_socket, read_lock, session_list, ongoing_session_list,
+                 CURRENCY_B, DECIMAL_PLACE_B):
         thread = Thread(target=self.card_terminal_routine)
-        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list)
-        self.__read_lock = read_lock
+        super().__init__(thread, db_interface, transfer_function, udp_socket, session_list, ongoing_session_list,
+                         CURRENCY_B, DECIMAL_PLACE_B, read_lock, None)
 
     def start(self):
         self._thread.start()
@@ -49,9 +50,9 @@ class CardTerminalService(BankService):
     def card_terminal_routine(self):
         while True:
             try:
-                self.__read_lock.acquire()
+                self._read_lock.acquire()
                 paket, src = self._udp_socket.recvfrom(1024)
-                self.__read_lock.release()
+                self._read_lock.release()
                 self.__transfer_from_debit_card(paket)
             except:
                 traceback.print_exc()
