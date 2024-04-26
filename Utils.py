@@ -1,9 +1,8 @@
 import copy
-
-import numpy
-
 from Crypto.Cipher import AES
-from numpy import random
+from numpy import random as numpy_random
+import random
+import string
 
 UTF8STR = "utf8"
 
@@ -29,6 +28,10 @@ def int_from_bytes(i):
     return int.from_bytes(i, "big", signed=True)
 
 
+def create_alpha_numeric(len):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=len))
+
+
 def number_fill_aes_block_to_16x(password_length):
     rest = password_length % 16
     if rest == 0:
@@ -43,7 +46,7 @@ def hashcode(v):
 
 
 def encrypt_uneven_block(plain, aes):
-    return aes.encrypt(plain + random.bytes(number_fill_aes_block_to_16x(len(plain))))
+    return aes.encrypt(plain + numpy_random.bytes(number_fill_aes_block_to_16x(len(plain))))
 
 
 def get_aes(key):
@@ -57,7 +60,7 @@ TERMINATION = int_to_bytes(2147483647)
 def create_number(length):
     s = ""
     for i in range(length):
-        s += str(random.randint(0, 10, 1, int)[0])
+        s += str(numpy_random.randint(0, 10, 1, int)[0])
     return s
 
 

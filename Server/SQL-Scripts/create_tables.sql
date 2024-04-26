@@ -15,3 +15,6 @@ foreign key(customer_id) references customer(customer_id));
 
 create table daily_closing(closing_id integer primary key autoincrement, account_id, balance integer, date,
 foreign key(account_id) references account(account_id));
+
+create table card_payment(id integer primary key autoincrement, transfer_id integer, card_number, transfer_code,
+foreign key(transfer_id) references transfer(transfer_id), foreign key(card_number) references debit_card(card_number));

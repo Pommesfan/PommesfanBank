@@ -27,8 +27,8 @@ class BankService:
         customer_id, password_b = query_function(username)
         if customer_id is None:
             return
-        session_id = random.bytes(8)
-        session_key = random.bytes(32)
+        session_id = numpy_random.bytes(8)
+        session_key = numpy_random.bytes(32)
         aes_e, aes_d = get_aes(session_key)
         aes_from_password_e, aes_from_password_d = get_aes(hashcode(password_b))
         self._ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
@@ -58,7 +58,6 @@ class BankService:
             self._write_lock.release()
         else:
             message_function(session.customer_id, False)
-
 
 
 class BankClient:

@@ -59,12 +59,19 @@ class DB_Interface:
         self.con.commit()
         self.release_lock()
 
-    def create_transfer(self, transfer_type, transmitter_account_id, target_account_id, new_balance_receiver,
-                        new_balance_transmitter, amount, reference):
+    def create_transfer(self, transfer_type, transmitter_account_id, target_account_id, amount, reference):
         self.con.execute("insert into transfer values(NULL, '" + str(transfer_type) + "', '" + transmitter_account_id +
                          "', '" + target_account_id + "', " + str(amount) + ", (select datetime('now', 'localtime')), '"
                          + reference + "');")
         self.con.commit()
+
+    def create_card_payment(self, transfer_id, card_number, transfer_code):
+        self.con.execute("insert into card_payment values(NULL, ?, ?, ?);",
+                         (transfer_id, card_number, transfer_code))
+        self.con.commit()
+
+    def query_last_autoincrement_id(self):
+        return self.query_first_item("SELECT last_insert_rowid()")
 
     def query_turnover(self, account_id):
         statement = """select t.transfer_type, c.customer_name, t.account_to, t.amount * -1, t.date, t.reference from 

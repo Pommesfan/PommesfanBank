@@ -60,7 +60,10 @@ class CardTerminalService(BankService):
             print("Kartenzahlung nicht erfolgreich")
             return
 
-        self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference)
+        transfer_id = self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, amount, reference,
+                                              query_autoincrement_id=True)
+        transfer_code = create_alpha_numeric(8)
+        self._db_interface.create_card_payment(transfer_id, card_number, transfer_code)
 
     def card_terminal_routine(self):
         while True:
