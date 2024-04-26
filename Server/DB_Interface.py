@@ -73,6 +73,11 @@ class DB_Interface:
     def query_last_autoincrement_id(self):
         return self.query_first_item("SELECT last_insert_rowid()")
 
+    def query_card_payment(self, transfer_code):
+        statement = "select * from card_payment c inner join transfer t on c.transfer_id = t.transfer_id where " \
+                "transfer_code = '" + transfer_code + "';"
+        return self.query_first_item(statement)
+
     def query_turnover(self, account_id):
         statement = """select t.transfer_type, c.customer_name, t.account_to, t.amount * -1, t.date, t.reference from 
                     transfer t inner join account a on t.account_to = a.account_id inner join customer c on 

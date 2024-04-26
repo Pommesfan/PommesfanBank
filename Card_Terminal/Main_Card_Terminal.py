@@ -4,7 +4,7 @@ from threading import Thread
 from Server.BankService import BankClient
 from Utils import *
 
-COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen"]
+COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen", "Logout"]
 
 
 class CardTerminalClient(BankClient):
@@ -26,7 +26,7 @@ class CardTerminalClient(BankClient):
             banking_command_b + self.session_id + cipher_paket, self.dst)
 
     def receive_routine(self):
-        while (True):
+        while True:
             paket, src = self.udp_socket.recvfrom(1024)
             if src != self.dst:
                 return
@@ -34,18 +34,31 @@ class CardTerminalClient(BankClient):
             cmd = int_from_bytes(paket[0:4])
             if cmd == PAYMENT_ORDER_ACK:
                 print("Transaktion vorbereitet: transfer_code: " + paket[4:12].decode(UTF8STR))
+            elif cmd == PAYMENT_EXECUTE_ACK:
+                print("erfolgreich ausgeführt")
+            elif cmd == PAYMENT_EXECUTE_NACK_TRANSFER_CODE:
+                print("transfer code ungültig")
+            elif cmd == PAYMENT_EXECUTE_NACK_CARDKEY:
+                print("cardkey passt nicht")
+            elif cmd == PAYMENT_PROOF_ACK:
+                print("Transaktion verbucht")
+            elif cmd == PAYMENT_PROOF_NACK:
+                print("Transaktion nicht verbucht")
 
     def routine(self):
         self.thread.start()
-        while (True):
-            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2])
+        while True:
+            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
+                  "; 4: " + COMMANDS[3])
             cmd = int(input())
             if cmd == 1:
                 self.init_payment()
             elif cmd == 2:
                 self.execute_payment()
             elif cmd == 3:
-                pass
+                self.proof_payment()
+            elif cmd == 4:
+                self.logout()
 
     def init_payment(self):
         print("Pfad Karte:")
@@ -68,9 +81,22 @@ class CardTerminalClient(BankClient):
         self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(INIT_CARD_PAYMENT_COMMAND), paket)
 
     def execute_payment(self):
+        print("transfer code eingeben:")
         transfer_code = input()
         paket = transfer_code.encode(UTF8STR)
         self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(EXECUTE_CARD_PAYMENT_COMMAND), paket)
+
+    def proof_payment(self):
+        print("transfer code eingeben:")
+        transfer_code = input()
+        if len(transfer_code) != 8:
+            print("transfer code muss 8-stellig sein")
+        paket = transfer_code.encode(UTF8STR)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(PROOF_CARD_PAYMENT_COMMAND), paket)
+
+    def logout(self):
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(EXIT_COMMAND), b'')
+        exit(0)
 
 
 terminal_id_b = '4894d56d4ztr8dt6z7'.encode(UTF8STR)

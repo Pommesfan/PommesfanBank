@@ -49,6 +49,11 @@ class CardTerminalService(BankService):
 
         self.complete_login(paket, src, query_function, message_function)
 
+    def answer_to_server(self, session, paket):
+        self._write_lock.acquire()
+        self._udp_socket.sendto(paket, session.ip_and_port)
+        self._write_lock.release()
+
     def __init_payment(self, session, cipher_paket):
         paket = session.aes_d.decrypt(cipher_paket)
         s = SliceIterator(paket)
@@ -60,39 +65,65 @@ class CardTerminalService(BankService):
         session.current_order = PaymentOrder(card_number, card_key, amount, reference, transfer_code)
         answer_paket = encrypt_uneven_block(
             int_to_bytes(PAYMENT_ORDER_ACK) + transfer_code.encode(UTF8STR), session.aes_e)
-        self._write_lock.acquire()
-        self._udp_socket.sendto(answer_paket, session.ip_and_port)
-        self._write_lock.release()
+        self.answer_to_server(session, answer_paket)
 
     def __execute_payment(self, session, cipher_paket):
         order = session.current_order
         transfer_code = session.aes_d.decrypt(cipher_paket)[0:8].decode(UTF8STR)
 
         if order.transfer_code != transfer_code:
+            answer_paket = encrypt_uneven_block(
+                int_to_bytes(PAYMENT_EXECUTE_NACK_TRANSFER_CODE) + transfer_code.encode(UTF8STR), session.aes_e)
+            self.answer_to_server(session, answer_paket)
+            print("Transfer code nicht erfasst")
             return
 
         terminal = self._db_interface.query_terminal(session.customer_id)
         account_to = terminal[2]
 
         res = self._db_interface.query_account_to_card(order.card_number.decode(UTF8STR))
-
-        if res is None:
+        if not res:
+            answer_paket = encrypt_uneven_block(
+                int_to_bytes(PAYMENT_EXECUTE_NACK_CARDNUMBER) + transfer_code.encode(UTF8STR), session.aes_e)
+            self.answer_to_server(session, answer_paket)
+            print("Karte nicht registriert")
             return
-        else:
-            account_from = res[0]
-            card_key_from_db = res[1]
+
+        account_from = res[0]
+        card_key_from_db = res[1]
 
         if card_key_from_db != order.card_key:
+            answer_paket = encrypt_uneven_block(
+                int_to_bytes(PAYMENT_EXECUTE_NACK_CARDKEY) + transfer_code.encode(UTF8STR), session.aes_e)
+            self.answer_to_server(session, answer_paket)
             print("Kartenzahlung nicht erfolgreich")
             return
 
-        transfer_id = self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, order.amount, order.reference,
+        transfer_id = self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, order.amount,
+                                              order.reference,
                                               query_autoincrement_id=True)
-        transfer_code = create_alpha_numeric(8)
         self._db_interface.create_card_payment(transfer_id, order.card_number, transfer_code)
+        answer_paket = encrypt_uneven_block(
+            int_to_bytes(PAYMENT_EXECUTE_ACK) + order.transfer_code.encode(UTF8STR), session.aes_e)
+        self.answer_to_server(session, answer_paket)
 
-    def __proof_payment(self, session, paket):
-        pass
+    def __proof_payment(self, session, cipher_paket):
+        transfer_code = session.aes_d.decrypt(cipher_paket)[0:8].decode(UTF8STR)
+        res = self._db_interface.query_card_payment(transfer_code)
+
+        if res:
+            answer_paket = encrypt_uneven_block(
+                int_to_bytes(PAYMENT_PROOF_ACK) + transfer_code.encode(UTF8STR), session.aes_e)
+        else:
+            answer_paket = encrypt_uneven_block(
+                int_to_bytes(PAYMENT_PROOF_NACK) + transfer_code.encode(UTF8STR), session.aes_e)
+        self.answer_to_server(session, answer_paket)
+
+    def logout(self, session):
+        if self._session_list.remove_session(session.session_id) == -1:
+            self.error("remove session: session_id not found")
+        else:
+            print("Terminal: " + session.customer_id + " ausgeloggt")
 
     def card_terminal_routine(self):
         while True:
@@ -114,5 +145,7 @@ class CardTerminalService(BankService):
                         self.__execute_payment(session, paket[16:])
                     elif payment_cmd == PROOF_CARD_PAYMENT_COMMAND:
                         self.__proof_payment(session, paket[16:])
+                    elif payment_cmd == EXIT_COMMAND:
+                        self.logout(session)
             except:
                 traceback.print_exc()
