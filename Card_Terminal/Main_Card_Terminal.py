@@ -18,7 +18,7 @@ class CardTerminalClient(BankClient):
         self.aes_d = aes_d
 
     def print_commands(self):
-        print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
+        print("\nKommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
               "; 4: " + COMMANDS[3])
 
     def send_to_server(self, banking_command_b, paket):

@@ -5,6 +5,7 @@ from Utils import *
 import re
 
 TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]
+COMMANDS = ["Ausloggen", "Abfragen", "Überweisen", "Umsatzübersicht"]
 
 
 class CustomerClient(BankClient):
@@ -23,7 +24,8 @@ class CustomerClient(BankClient):
         self.decimal_position = s.get_int()
 
     def print_commands(self):
-        print("Komandos: 1:Ausloggen, 2:abfragen, 3:überweisen, 4:Umsatzübersicht")
+        print("\nKommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
+              "; 4: " + COMMANDS[3])
 
     def receive_routine(self):
         while True:
@@ -85,7 +87,6 @@ class CustomerClient(BankClient):
             print(TRANSFER_TYPES[transfer_type - 1] + " - Name: " + transmitter_name + "; Kontonummer: " + account_id +
                   "; Wert: " + self.format_amount(
                 amount) + "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
-        print()
 
     def send_to_server(self, banking_command_b, paket):
         cipher_paket = encrypt_uneven_block(paket, self.aes_e)
