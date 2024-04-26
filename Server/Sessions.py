@@ -4,10 +4,10 @@ import Server.Sessions
 
 
 class Session:
-    def __init__(self, session_id, session_key, customer_id, ip_and_port, aes_e, aes_d):
+    def __init__(self, session_id, session_key, user_id, ip_and_port, aes_e, aes_d):
         self.session_id = session_id
         self.session_key = session_key
-        self.customer_id = customer_id
+        self.user_id = user_id
         self.ip_and_port = ip_and_port
         self.aes_e = aes_e
         self.aes_d = aes_d
@@ -26,7 +26,7 @@ class SessionList:
 
     def add(self, session):
         if isinstance(session, Server.Sessions.Session):
-            session_with_same_customer = self.get_session_to_customer(session.customer_id)
+            session_with_same_customer = self.get_session_to_customer(session.user_id)
             self.__lock.acquire()
             if session_with_same_customer is not None:
                 self.__sessions[session_with_same_customer] = session
@@ -56,7 +56,7 @@ class SessionList:
     def get_session_to_customer(self, customer_id):
         self.__lock.acquire()
         for i in range(len(self.__sessions)):
-            if self.__sessions[i].customer_id == customer_id:
+            if self.__sessions[i].user_id == customer_id:
                 self.__lock.release()
                 return i
         self.__lock.release()

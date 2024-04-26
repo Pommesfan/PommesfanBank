@@ -1,6 +1,4 @@
 import socket
-from threading import Thread
-
 from Server.BankService import BankClient
 from Utils import *
 
@@ -18,7 +16,10 @@ class CardTerminalClient(BankClient):
         self.session_id = session_id
         self.aes_e = aes_e
         self.aes_d = aes_d
-        self.thread = Thread(target=self.receive_routine)
+
+    def print_commands(self):
+        print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
+              "; 4: " + COMMANDS[3])
 
     def send_to_server(self, banking_command_b, paket):
         cipher_paket = encrypt_uneven_block(paket, self.aes_e)
@@ -46,6 +47,7 @@ class CardTerminalClient(BankClient):
                 print("Transaktion verbucht")
             elif cmd == PAYMENT_PROOF_NACK:
                 print("Transaktion nicht verbucht")
+            self.print_commands()
 
     def init_payment(self):
         print("Pfad Karte:")
@@ -87,9 +89,8 @@ class CardTerminalClient(BankClient):
 
     def routine(self):
         self.thread.start()
+        self.print_commands()
         while True:
-            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
-                  "; 4: " + COMMANDS[3])
             cmd = int(input())
             if cmd == 1:
                 self.init_payment()

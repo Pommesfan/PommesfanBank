@@ -49,11 +49,6 @@ class CardTerminalService(BankService):
 
         self.complete_login(paket, src, query_function, message_function)
 
-    def answer_to_client(self, session, paket):
-        self._write_lock.acquire()
-        self._udp_socket.sendto(paket, session.ip_and_port)
-        self._write_lock.release()
-
     def __init_payment(self, session, paket):
         s = SliceIterator(paket)
         card_number = s.get_slice(16)
@@ -77,7 +72,7 @@ class CardTerminalService(BankService):
             print("Transfer code nicht erfasst")
             return
 
-        terminal = self._db_interface.query_terminal(session.customer_id)
+        terminal = self._db_interface.query_terminal(session.user_id)
         account_to = terminal[2]
 
         res = self._db_interface.query_account_to_card(order.card_number.decode(UTF8STR))
@@ -127,7 +122,7 @@ class CardTerminalService(BankService):
         if self._session_list.remove_session(session.session_id) == -1:
             self.error("remove session: session_id not found")
         else:
-            print("Terminal: " + session.customer_id + " ausgeloggt")
+            print("Terminal: " + session.user_id + " ausgeloggt")
 
     def card_terminal_routine(self):
         while True:

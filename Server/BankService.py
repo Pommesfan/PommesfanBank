@@ -28,6 +28,11 @@ class BankService:
         print(s)
         exit(1)
 
+    def answer_to_client(self, session, paket):
+        self._write_lock.acquire()
+        self._udp_socket.sendto(paket, session.ip_and_port)
+        self._write_lock.release()
+
     def start_login(self, paket, src, query_function, SessionClass):
         s = SliceIterator(paket)
         username = s.next_slice().decode(UTF8STR)
@@ -56,21 +61,28 @@ class BankService:
         len_password = int_from_bytes(password_with_len[0:4])
         password_b = password_with_len[4:4 + len_password]
         self._ongoing_session_list.remove_session(session_id)
-        name, password_b_client = query_function(session.customer_id)
+        name, password_b_client = query_function(session.user_id)
         if password_b == password_b_client:
             self._session_list.add(session)
-            message_function(session.customer_id, True)
+            message_function(session.user_id, True)
             self._write_lock.acquire()
             self._udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
             self._write_lock.release()
         else:
-            message_function(session.customer_id, False)
+            message_function(session.user_id, False)
 
 
 class BankClient:
     def __init__(self, udp_socket, dst):
         self.udp_socket = udp_socket
         self.dst = dst
+        self.thread = Thread(target=self.receive_routine)
+
+    def print_commands(self):
+        pass
+
+    def receive_routine(self):
+        pass
 
     def login(self, username_b, password_b, dst):
         # start login paket

@@ -68,7 +68,7 @@ class CustomerService(BankService):
         amount = int_from_bytes(slice_iterator.get_slice(4))
         reference_length = int_from_bytes(slice_iterator.get_slice(4))
         reference = slice_iterator.get_slice(reference_length).decode(UTF8STR)
-        transmitter_account_id = self._db_interface.query_account_to_customer(session.customer_id, "customer_id")[0]
+        transmitter_account_id = self._db_interface.query_account_to_customer(session.user_id, "customer_id")[0]
 
         if '@' in receiver_account_id:
             res = self._db_interface.query_account_to_customer(receiver_account_id, "email")
@@ -77,9 +77,11 @@ class CustomerService(BankService):
             receiver_account_id = res[0]
 
         self._transfer_function(MANUAL_TRANSFER, transmitter_account_id, receiver_account_id, amount, reference)
+        self.send_to_customer(int_to_bytes(TRANSFER_ACK), session)
 
     def tcp_on_demand(self, session):
-        self.send_to_customer(int_to_bytes(self.__tcp_port), session)
+        paket = int_to_bytes(SEE_TURNOVER_RESPONSE) + int_to_bytes(self.__tcp_port)
+        self.send_to_customer(paket, session)
         self.__tcp_socket.listen(1)
         client, _ = self.__tcp_socket.accept()
         return client
@@ -118,19 +120,19 @@ class CustomerService(BankService):
 
     def user_exit(self, session):
         self._db_interface.acquire_lock()
-        name = self._db_interface.query_customer_name(session.customer_id)
+        name = self._db_interface.query_customer_name(session.user_id)
         self._db_interface.release_lock()
         if self._session_list.remove_session(session.session_id) == -1:
             self.error("remove session: session_id not found")
-        print("Nutzer: " + session.customer_id + " - " + name[0] + " ausgeloggt")
+        print("Nutzer: " + session.user_id + " - " + name[0] + " ausgeloggt")
 
     def show_balance(self, session):
-        if session.customer_id is not None:
+        if session.user_id is not None:
             self._db_interface.acquire_lock()
-            account_id = self._db_interface.query_account_to_customer(session.customer_id, "customer_id")[0]
+            account_id = self._db_interface.query_account_to_customer(session.user_id, "customer_id")[0]
             balance = self._db_interface.query_balance(account_id)[0]
             self._db_interface.release_lock()
-            paket = int_to_bytes(balance)
+            paket = int_to_bytes(SHOW_BALANCE_RESPONSE) + int_to_bytes(balance)
             self.send_to_customer(paket, session)
         else:
             self.error("No customer id to session")
@@ -152,7 +154,7 @@ class CustomerService(BankService):
                     # session was removed due to logout
                     if session is None:
                         continue
-                    customer_id = session.customer_id
+                    customer_id = session.user_id
                     paket = session.aes_d.decrypt(paket[12:])
                     banking_command = int_from_bytes(paket[0:4])
                     if banking_command == EXIT_COMMAND:
