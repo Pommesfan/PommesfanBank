@@ -54,8 +54,7 @@ class CardTerminalService(BankService):
         self._udp_socket.sendto(paket, session.ip_and_port)
         self._write_lock.release()
 
-    def __init_payment(self, session, cipher_paket):
-        paket = session.aes_d.decrypt(cipher_paket)
+    def __init_payment(self, session, paket):
         s = SliceIterator(paket)
         card_number = s.get_slice(16)
         card_key = s.get_slice(64)
@@ -67,9 +66,9 @@ class CardTerminalService(BankService):
             int_to_bytes(PAYMENT_ORDER_ACK) + transfer_code.encode(UTF8STR), session.aes_e)
         self.answer_to_server(session, answer_paket)
 
-    def __execute_payment(self, session, cipher_paket):
+    def __execute_payment(self, session, paket):
         order = session.current_order
-        transfer_code = session.aes_d.decrypt(cipher_paket)[0:8].decode(UTF8STR)
+        transfer_code = paket[0:8].decode(UTF8STR)
 
         if order.transfer_code != transfer_code:
             answer_paket = encrypt_uneven_block(
@@ -108,7 +107,7 @@ class CardTerminalService(BankService):
         self.answer_to_server(session, answer_paket)
 
     def __proof_payment(self, session, cipher_paket):
-        transfer_code = session.aes_d.decrypt(cipher_paket)[0:8].decode(UTF8STR)
+        transfer_code = cipher_paket[0:8].decode(UTF8STR)
         res = self._db_interface.query_card_payment(transfer_code)
 
         if res:
@@ -137,14 +136,15 @@ class CardTerminalService(BankService):
                 elif command == COMPLETE_LOGIN:
                     self.__complete_login(paket[4:], src)
                 elif command == CARD_PAYMENT_COMMAND:
-                    payment_cmd = int_from_bytes(paket[4:8])
-                    session: CardTerminalSession = self._session_list.get_session_from_id(paket[8:16], src)
+                    session: CardTerminalSession = self._session_list.get_session_from_id(paket[4:12], src)
+                    paket = session.aes_d.decrypt(paket[12:])
+                    payment_cmd = int_from_bytes(paket[0:4])
                     if payment_cmd == INIT_CARD_PAYMENT_COMMAND:
-                        self.__init_payment(session, paket[16:])
+                        self.__init_payment(session, paket[4:])
                     elif payment_cmd == EXECUTE_CARD_PAYMENT_COMMAND:
-                        self.__execute_payment(session, paket[16:])
+                        self.__execute_payment(session, paket[4:])
                     elif payment_cmd == PROOF_CARD_PAYMENT_COMMAND:
-                        self.__proof_payment(session, paket[16:])
+                        self.__proof_payment(session, paket[4:])
                     elif payment_cmd == EXIT_COMMAND:
                         self.logout(session)
             except:

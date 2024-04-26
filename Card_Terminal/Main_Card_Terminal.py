@@ -77,25 +77,25 @@ class CardTerminalClient(BankClient):
         reference_b = input().encode(UTF8STR)
         len_refenrence_b = int_to_bytes(len(reference_b))
 
-        paket = card_id_b + card_key + amount_b + len_refenrence_b + reference_b
-        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(INIT_CARD_PAYMENT_COMMAND), paket)
+        paket = int_to_bytes(INIT_CARD_PAYMENT_COMMAND) + card_id_b + card_key + amount_b + len_refenrence_b + reference_b
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
 
     def execute_payment(self):
         print("transfer code eingeben:")
         transfer_code = input()
-        paket = transfer_code.encode(UTF8STR)
-        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(EXECUTE_CARD_PAYMENT_COMMAND), paket)
+        paket = int_to_bytes(EXECUTE_CARD_PAYMENT_COMMAND) + transfer_code.encode(UTF8STR)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
 
     def proof_payment(self):
         print("transfer code eingeben:")
         transfer_code = input()
         if len(transfer_code) != 8:
             print("transfer code muss 8-stellig sein")
-        paket = transfer_code.encode(UTF8STR)
-        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(PROOF_CARD_PAYMENT_COMMAND), paket)
+        paket = int_to_bytes(PROOF_CARD_PAYMENT_COMMAND) + transfer_code.encode(UTF8STR)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
 
     def logout(self):
-        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(EXIT_COMMAND), b'')
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), int_to_bytes(EXIT_COMMAND))
         exit(0)
 
 
