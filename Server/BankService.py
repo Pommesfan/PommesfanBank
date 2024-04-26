@@ -29,8 +29,9 @@ class BankService:
         exit(1)
 
     def answer_to_client(self, session, paket):
+        cipher_paket = encrypt_uneven_block(paket, session.aes_e)
         self._write_lock.acquire()
-        self._udp_socket.sendto(paket, session.ip_and_port)
+        self._udp_socket.sendto(cipher_paket, session.ip_and_port)
         self._write_lock.release()
 
     def start_login(self, paket, src, query_function, SessionClass):

@@ -17,12 +17,6 @@ class CustomerService(BankService):
         self.__tcp_socket.bind((localIP, tcp_port))
         self.__localIP = localIP
 
-    def send_to_customer(self, paket, session):
-        cipher_paket = encrypt_uneven_block(paket, session.aes_e)
-        self._write_lock.acquire()
-        self._udp_socket.sendto(cipher_paket, session.ip_and_port)
-        self._write_lock.release()
-
     def get_customer_from_username(self, username):
         self._db_interface.acquire_lock()
         if '@' in username:
@@ -77,11 +71,11 @@ class CustomerService(BankService):
             receiver_account_id = res[0]
 
         self._transfer_function(MANUAL_TRANSFER, transmitter_account_id, receiver_account_id, amount, reference)
-        self.send_to_customer(int_to_bytes(TRANSFER_ACK), session)
+        self.answer_to_client(session, int_to_bytes(TRANSFER_ACK))
 
     def tcp_on_demand(self, session):
         paket = int_to_bytes(SEE_TURNOVER_RESPONSE) + int_to_bytes(self.__tcp_port)
-        self.send_to_customer(paket, session)
+        self.answer_to_client(session, paket)
         self.__tcp_socket.listen(1)
         client, _ = self.__tcp_socket.accept()
         return client
@@ -133,7 +127,7 @@ class CustomerService(BankService):
             balance = self._db_interface.query_balance(account_id)[0]
             self._db_interface.release_lock()
             paket = int_to_bytes(SHOW_BALANCE_RESPONSE) + int_to_bytes(balance)
-            self.send_to_customer(paket, session)
+            self.answer_to_client(session, paket)
         else:
             self.error("No customer id to session")
 
