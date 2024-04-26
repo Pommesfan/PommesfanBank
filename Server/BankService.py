@@ -21,7 +21,7 @@ class BankService:
     def start(self):
         self._thread.start()
 
-    def start_login(self, paket, src, query_function):
+    def start_login(self, paket, src, query_function, SessionClass):
         s = SliceIterator(paket)
         username = s.next_slice().decode(UTF8STR)
         customer_id, password_b = query_function(username)
@@ -31,7 +31,7 @@ class BankService:
         session_key = numpy_random.bytes(32)
         aes_e, aes_d = get_aes(session_key)
         aes_from_password_e, aes_from_password_d = get_aes(hashcode(password_b))
-        self._ongoing_session_list.add(Session(session_id, session_key, customer_id, src, aes_e, aes_d))
+        self._ongoing_session_list.add(SessionClass(session_id, session_key, customer_id, src, aes_e, aes_d))
 
         bank_information_b = int_to_bytes(len(self._CURRENCY_B)) + self._CURRENCY_B + self._DECIMAL_PLACE_B
         len_bank_information_b = int_to_bytes(len(bank_information_b))

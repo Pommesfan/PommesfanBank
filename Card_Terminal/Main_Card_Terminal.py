@@ -1,7 +1,10 @@
 import socket
+from threading import Thread
 
 from Server.BankService import BankClient
 from Utils import *
+
+COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen"]
 
 
 class CardTerminalClient(BankClient):
@@ -15,13 +18,36 @@ class CardTerminalClient(BankClient):
         self.session_id = session_id
         self.aes_e = aes_e
         self.aes_d = aes_d
+        self.thread = Thread(target=self.receive_routine)
 
     def send_to_server(self, banking_command_b, paket):
         cipher_paket = encrypt_uneven_block(paket, self.aes_e)
         self.udp_socket.sendto(
             banking_command_b + self.session_id + cipher_paket, self.dst)
 
+    def receive_routine(self):
+        while (True):
+            paket, src = self.udp_socket.recvfrom(1024)
+            if src != self.dst:
+                return
+            paket = self.aes_d.decrypt(paket)
+            cmd = int_from_bytes(paket[0:4])
+            if cmd == PAYMENT_ORDER_ACK:
+                print("Transaktion vorbereitet: transfer_code: " + paket[4:12].decode(UTF8STR))
+
     def routine(self):
+        self.thread.start()
+        while (True):
+            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2])
+            cmd = int(input())
+            if cmd == 1:
+                self.init_payment()
+            elif cmd == 2:
+                self.execute_payment()
+            elif cmd == 3:
+                pass
+
+    def init_payment(self):
         print("Pfad Karte:")
         f = open(input(), "rb")
         card = f.read(80)
@@ -39,7 +65,12 @@ class CardTerminalClient(BankClient):
         len_refenrence_b = int_to_bytes(len(reference_b))
 
         paket = card_id_b + card_key + amount_b + len_refenrence_b + reference_b
-        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(INIT_CARD_PAYMENT_COMMAND), paket)
+
+    def execute_payment(self):
+        transfer_code = input()
+        paket = transfer_code.encode(UTF8STR)
+        self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND) + int_to_bytes(EXECUTE_CARD_PAYMENT_COMMAND), paket)
 
 
 terminal_id_b = '4894d56d4ztr8dt6z7'.encode(UTF8STR)

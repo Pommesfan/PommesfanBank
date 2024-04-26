@@ -1,6 +1,7 @@
 import socket
 import traceback
 from Server.BankService import BankService
+from Server.Sessions import Session
 from Utils import *
 
 
@@ -49,7 +50,7 @@ class CustomerService(BankService):
                 customer_password_b = res[3].encode(UTF8STR)
                 return customer_id, customer_password_b
 
-        super().start_login(paket, src, query_function)
+        super().start_login(paket, src, query_function, Session)
 
     def __complete_login(self, paket, src):
         def query_function(customer_id):
