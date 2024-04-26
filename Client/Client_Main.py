@@ -10,22 +10,14 @@ COMMANDS = ["Ausloggen", "Abfragen", "Überweisen", "Umsatzübersicht"]
 
 class CustomerClient(BankClient):
     def __init__(self, server_ip, udp_socket, dst, username, password):
-        super().__init__(udp_socket, dst)
         self.server_ip = server_ip
         username_b = username.encode(UTF8STR)
         password_b = password.encode(UTF8STR)
-        bank_information, session_id, aes_e, aes_d = self.login(username_b, password_b, dst)
-        bank_information = bank_information
-        self.session_id = session_id
-        self.aes_e = aes_e
-        self.aes_d = aes_d
+        super().__init__(udp_socket, dst)
+        bank_information = self.login(username_b, password_b, dst)
         s = SliceIterator(bank_information)
         self.currency = s.next_slice().decode(UTF8STR)
         self.decimal_position = s.get_int()
-
-    def print_commands(self):
-        print("\nKommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
-              "; 4: " + COMMANDS[3])
 
     def receive_routine(self):
         while True:
@@ -43,7 +35,7 @@ class CustomerClient(BankClient):
             elif cmd == SEE_TURNOVER_RESPONSE:
                 turnover_list_b = self.receive_turnover(paket[4:])
                 self.print_turnover(turnover_list_b)
-            self.print_commands()
+            self.print_commands(COMMANDS)
 
     def format_amount(self, amount):
         amount = str(amount)
@@ -88,14 +80,9 @@ class CustomerClient(BankClient):
                   "; Wert: " + self.format_amount(
                 amount) + "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
 
-    def send_to_server(self, banking_command_b, paket):
-        cipher_paket = encrypt_uneven_block(paket, self.aes_e)
-        self.udp_socket.sendto(
-            banking_command_b + self.session_id + cipher_paket, self.dst)
-
     def routine(self):
         self.thread.start()
-        self.print_commands()
+        self.print_commands(COMMANDS)
         while True:
             banking_command_b = int_to_bytes(BANKING_COMMAND)
             cmd = int(input())

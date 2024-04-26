@@ -7,24 +7,9 @@ COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen", 
 
 class CardTerminalClient(BankClient):
     def __init__(self, udp_socket, dst, terminal_id_b, terminal_key_b):
-        super().__init__(udp_socket, dst)
-        self.udp_socket = udp_socket
-        self.terminal_id_b = terminal_id_b
         self.terminal_key_b = terminal_key_b
-        bank_information, session_id, aes_e, aes_d = self.login(terminal_id_b, terminal_key_b, dst)
-        self.bank_information = bank_information
-        self.session_id = session_id
-        self.aes_e = aes_e
-        self.aes_d = aes_d
-
-    def print_commands(self):
-        print("\nKommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
-              "; 4: " + COMMANDS[3])
-
-    def send_to_server(self, banking_command_b, paket):
-        cipher_paket = encrypt_uneven_block(paket, self.aes_e)
-        self.udp_socket.sendto(
-            banking_command_b + self.session_id + cipher_paket, self.dst)
+        super().__init__(udp_socket, dst)
+        self.login(terminal_id_b, terminal_key_b, dst)
 
     def receive_routine(self):
         while True:
@@ -47,7 +32,7 @@ class CardTerminalClient(BankClient):
                 print("Transaktion verbucht")
             elif cmd == PAYMENT_PROOF_NACK:
                 print("Transaktion nicht verbucht")
-            self.print_commands()
+            self.print_commands(COMMANDS)
 
     def init_payment(self):
         print("Pfad Karte:")
@@ -89,7 +74,7 @@ class CardTerminalClient(BankClient):
 
     def routine(self):
         self.thread.start()
-        self.print_commands()
+        self.print_commands(COMMANDS)
         while True:
             cmd = int(input())
             if cmd == 1:

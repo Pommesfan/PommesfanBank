@@ -77,12 +77,23 @@ class BankClient:
         self.udp_socket = udp_socket
         self.dst = dst
         self.thread = Thread(target=self.receive_routine)
+        self.session_id = None
+        self.aes_e = None
+        self.aes_d = None
 
-    def print_commands(self):
-        pass
+    def print_commands(self, commands):
+        s= "\nKommandos: "
+        for i in range(len(commands)):
+            s += str(i + 1) + ": " + commands[i] + ", "
+        print(s)
 
     def receive_routine(self):
         pass
+
+    def send_to_server(self, banking_command_b, paket):
+        cipher_paket = encrypt_uneven_block(paket, self.aes_e)
+        self.udp_socket.sendto(
+            banking_command_b + self.session_id + cipher_paket, self.dst)
 
     def login(self, username_b, password_b, dst):
         # start login paket
@@ -107,4 +118,7 @@ class BankClient:
         ack = int_from_bytes(self.udp_socket.recv(4))
         if ack != LOGIN_ACK:
             exit(1)
-        return bank_information, session_id, aes_e, aes_d
+        self.session_id = session_id
+        self.aes_e = aes_e
+        self.aes_d = aes_d
+        return bank_information
