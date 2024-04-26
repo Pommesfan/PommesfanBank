@@ -38,27 +38,14 @@ class CardTerminalClient(BankClient):
                 print("erfolgreich ausgeführt")
             elif cmd == PAYMENT_EXECUTE_NACK_TRANSFER_CODE:
                 print("transfer code ungültig")
+            elif cmd == PAYMENT_EXECUTE_NACK_CARDNUMBER:
+                print("Karte nicht registriert")
             elif cmd == PAYMENT_EXECUTE_NACK_CARDKEY:
                 print("cardkey passt nicht")
             elif cmd == PAYMENT_PROOF_ACK:
                 print("Transaktion verbucht")
             elif cmd == PAYMENT_PROOF_NACK:
                 print("Transaktion nicht verbucht")
-
-    def routine(self):
-        self.thread.start()
-        while True:
-            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
-                  "; 4: " + COMMANDS[3])
-            cmd = int(input())
-            if cmd == 1:
-                self.init_payment()
-            elif cmd == 2:
-                self.execute_payment()
-            elif cmd == 3:
-                self.proof_payment()
-            elif cmd == 4:
-                self.logout()
 
     def init_payment(self):
         print("Pfad Karte:")
@@ -77,7 +64,7 @@ class CardTerminalClient(BankClient):
         reference_b = input().encode(UTF8STR)
         len_refenrence_b = int_to_bytes(len(reference_b))
 
-        paket = int_to_bytes(INIT_CARD_PAYMENT_COMMAND) + card_id_b + card_key + amount_b + len_refenrence_b + reference_b
+        paket = (int_to_bytes(INIT_CARD_PAYMENT_COMMAND) + card_id_b + card_key + amount_b + len_refenrence_b + reference_b)
         self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), paket)
 
     def execute_payment(self):
@@ -97,6 +84,21 @@ class CardTerminalClient(BankClient):
     def logout(self):
         self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), int_to_bytes(EXIT_COMMAND))
         exit(0)
+
+    def routine(self):
+        self.thread.start()
+        while True:
+            print("Kommando eingeben:\n1: " + COMMANDS[0] + "; 2: " + COMMANDS[1] + "; 3: " + COMMANDS[2] +
+                  "; 4: " + COMMANDS[3])
+            cmd = int(input())
+            if cmd == 1:
+                self.init_payment()
+            elif cmd == 2:
+                self.execute_payment()
+            elif cmd == 3:
+                self.proof_payment()
+            elif cmd == 4:
+                self.logout()
 
 
 terminal_id_b = '4894d56d4ztr8dt6z7'.encode(UTF8STR)

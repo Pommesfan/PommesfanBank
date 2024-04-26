@@ -70,7 +70,7 @@ class CardTerminalService(BankService):
         order = session.current_order
         transfer_code = paket[0:8].decode(UTF8STR)
 
-        if order.transfer_code != transfer_code:
+        if not order or order.transfer_code != transfer_code:
             answer_paket = encrypt_uneven_block(
                 int_to_bytes(PAYMENT_EXECUTE_NACK_TRANSFER_CODE) + transfer_code.encode(UTF8STR), session.aes_e)
             self.answer_to_server(session, answer_paket)
@@ -101,14 +101,19 @@ class CardTerminalService(BankService):
         transfer_id = self._transfer_function(DEBIT_CARD_PAYMENT, account_from, account_to, order.amount,
                                               order.reference,
                                               query_autoincrement_id=True)
+        self._db_interface.acquire_lock()
         self._db_interface.create_card_payment(transfer_id, order.card_number, transfer_code)
+        self._db_interface.release_lock()
+        session.current_order = None
         answer_paket = encrypt_uneven_block(
             int_to_bytes(PAYMENT_EXECUTE_ACK) + order.transfer_code.encode(UTF8STR), session.aes_e)
         self.answer_to_server(session, answer_paket)
 
     def __proof_payment(self, session, cipher_paket):
         transfer_code = cipher_paket[0:8].decode(UTF8STR)
+        self._db_interface.acquire_lock()
         res = self._db_interface.query_card_payment(transfer_code)
+        self._db_interface.release_lock()
 
         if res:
             answer_paket = encrypt_uneven_block(
