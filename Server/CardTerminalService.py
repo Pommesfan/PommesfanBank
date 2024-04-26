@@ -49,7 +49,7 @@ class CardTerminalService(BankService):
 
         self.complete_login(paket, src, query_function, message_function)
 
-    def answer_to_server(self, session, paket):
+    def answer_to_client(self, session, paket):
         self._write_lock.acquire()
         self._udp_socket.sendto(paket, session.ip_and_port)
         self._write_lock.release()
@@ -64,7 +64,7 @@ class CardTerminalService(BankService):
         session.current_order = PaymentOrder(card_number, card_key, amount, reference, transfer_code)
         answer_paket = encrypt_uneven_block(
             int_to_bytes(PAYMENT_ORDER_ACK) + transfer_code.encode(UTF8STR), session.aes_e)
-        self.answer_to_server(session, answer_paket)
+        self.answer_to_client(session, answer_paket)
 
     def __execute_payment(self, session, paket):
         order = session.current_order
@@ -73,7 +73,7 @@ class CardTerminalService(BankService):
         if not order or order.transfer_code != transfer_code:
             answer_paket = encrypt_uneven_block(
                 int_to_bytes(PAYMENT_EXECUTE_NACK_TRANSFER_CODE) + transfer_code.encode(UTF8STR), session.aes_e)
-            self.answer_to_server(session, answer_paket)
+            self.answer_to_client(session, answer_paket)
             print("Transfer code nicht erfasst")
             return
 
@@ -84,7 +84,7 @@ class CardTerminalService(BankService):
         if not res:
             answer_paket = encrypt_uneven_block(
                 int_to_bytes(PAYMENT_EXECUTE_NACK_CARDNUMBER) + transfer_code.encode(UTF8STR), session.aes_e)
-            self.answer_to_server(session, answer_paket)
+            self.answer_to_client(session, answer_paket)
             print("Karte nicht registriert")
             return
 
@@ -94,7 +94,7 @@ class CardTerminalService(BankService):
         if card_key_from_db != order.card_key:
             answer_paket = encrypt_uneven_block(
                 int_to_bytes(PAYMENT_EXECUTE_NACK_CARDKEY) + transfer_code.encode(UTF8STR), session.aes_e)
-            self.answer_to_server(session, answer_paket)
+            self.answer_to_client(session, answer_paket)
             print("Kartenzahlung nicht erfolgreich")
             return
 
@@ -107,7 +107,7 @@ class CardTerminalService(BankService):
         session.current_order = None
         answer_paket = encrypt_uneven_block(
             int_to_bytes(PAYMENT_EXECUTE_ACK) + order.transfer_code.encode(UTF8STR), session.aes_e)
-        self.answer_to_server(session, answer_paket)
+        self.answer_to_client(session, answer_paket)
 
     def __proof_payment(self, session, cipher_paket):
         transfer_code = cipher_paket[0:8].decode(UTF8STR)
@@ -121,7 +121,7 @@ class CardTerminalService(BankService):
         else:
             answer_paket = encrypt_uneven_block(
                 int_to_bytes(PAYMENT_PROOF_NACK) + transfer_code.encode(UTF8STR), session.aes_e)
-        self.answer_to_server(session, answer_paket)
+        self.answer_to_client(session, answer_paket)
 
     def logout(self, session):
         if self._session_list.remove_session(session.session_id) == -1:

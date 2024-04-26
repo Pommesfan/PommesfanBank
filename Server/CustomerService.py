@@ -23,13 +23,6 @@ class CustomerService(BankService):
         self._udp_socket.sendto(cipher_paket, session.ip_and_port)
         self._write_lock.release()
 
-    def error(self, s):
-        self._db_interface.acquire_lock()
-        self._db_interface.close()
-        self._db_interface.release_lock()
-        print(s)
-        exit(1)
-
     def get_customer_from_username(self, username):
         self._db_interface.acquire_lock()
         if '@' in username:

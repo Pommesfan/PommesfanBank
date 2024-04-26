@@ -21,6 +21,13 @@ class BankService:
     def start(self):
         self._thread.start()
 
+    def error(self, s):
+        self._db_interface.acquire_lock()
+        self._db_interface.close()
+        self._db_interface.release_lock()
+        print(s)
+        exit(1)
+
     def start_login(self, paket, src, query_function, SessionClass):
         s = SliceIterator(paket)
         username = s.next_slice().decode(UTF8STR)
