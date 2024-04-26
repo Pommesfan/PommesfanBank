@@ -1,5 +1,5 @@
 import socket
-from Server.BankService import BankClient
+from Server.BankClient import BankClient
 from Utils import *
 
 COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen", "Logout"]
@@ -16,7 +16,7 @@ class CardTerminalClient(BankClient):
             paket, src = self.udp_socket.recvfrom(1024)
             if src != self.dst:
                 return
-            paket = self.aes_d.decrypt(paket)
+            paket = self.session.aes_d.decrypt(paket)
             cmd = int_from_bytes(paket[0:4])
             if cmd == PAYMENT_ORDER_ACK:
                 print("Transaktion vorbereitet: transfer_code: " + paket[4:12].decode(UTF8STR))

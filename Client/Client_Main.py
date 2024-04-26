@@ -1,6 +1,6 @@
 import socket
 
-from Server.BankService import BankClient
+from Server.BankClient import BankClient
 from Utils import *
 import re
 
@@ -24,7 +24,7 @@ class CustomerClient(BankClient):
             paket, src = self.udp_socket.recvfrom(1024)
             if src != self.dst:
                 return
-            paket = self.aes_d.decrypt(paket)
+            paket = self.session.aes_d.decrypt(paket)
             cmd = int_from_bytes(paket[0:4])
 
             if cmd == SHOW_BALANCE_RESPONSE:
@@ -62,7 +62,7 @@ class CustomerClient(BankClient):
         client = self.tcp_on_demand(port)
         length = int_from_bytes(client.recv(4))
         while not length == 0:
-            data += self.aes_d.decrypt(client.recv(length))
+            data += self.session.aes_d.decrypt(client.recv(length))
             length = int_from_bytes(client.recv(4))
         client.close()
         return data

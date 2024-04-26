@@ -1,5 +1,4 @@
 import traceback
-
 from Server.Sessions import CardTerminalSession
 from Utils import *
 from BankService import BankService
