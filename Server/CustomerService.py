@@ -31,7 +31,7 @@ class CustomerService(BankService):
             res = self.get_customer_from_username(username)
             if res is None:
                 print("Kundennummer oder E-Mail '" + username + "' nicht registriert")
-                return None, None
+                return None
             else:
                 customer_id = res[0]
                 customer_password_b = res[3].encode(UTF8STR)

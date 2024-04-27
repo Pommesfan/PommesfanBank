@@ -35,9 +35,10 @@ class BankService:
     def start_login(self, paket, src, query_function, SessionClass):
         s = SliceIterator(paket)
         username = s.next_slice().decode(UTF8STR)
-        customer_id, password_b = query_function(username)
-        if customer_id is None:
+        res = query_function(username)
+        if res is None:
             return
+        customer_id, password_b = res
         session_id = numpy_random.bytes(8)
         session_key = numpy_random.bytes(32)
         aes_e, aes_d = get_aes(session_key)

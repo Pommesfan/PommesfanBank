@@ -84,7 +84,8 @@ def transfer(transfer_type, transmitter_account_id, receiver_account_id, amount,
     date_daily_closing_receiver = datetime.strptime(daily_closing_receiver[3], timestamp_descriptor)
     balance_transmitter = daily_closing_transmitter[2]
     balance_receiver = daily_closing_receiver[2]
-    if amount < 1 or transmitter_account_id == receiver_account_id or amount > balance_transmitter:
+    if (amount < 1 or transmitter_account_id == receiver_account_id or amount > balance_transmitter or
+            "'" in receiver_account_id or "'" in reference):
         db_interface.release_lock()
         return
 

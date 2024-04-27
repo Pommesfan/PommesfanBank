@@ -26,7 +26,7 @@ class CardTerminalService(BankService):
             res = self._db_interface.query_terminal(terminal_id)
             if res is None:
                 print("Terminal '" + terminal_id + "' nicht registriert")
-                return None, None
+                return None
             else:
                 terminal_key_b = res[1].encode(UTF8STR)
                 return terminal_id, terminal_key_b
