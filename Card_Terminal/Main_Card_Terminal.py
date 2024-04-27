@@ -6,10 +6,8 @@ COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen", 
 
 
 class CardTerminalClient(BankClient):
-    def __init__(self, udp_socket, dst, terminal_id_b, terminal_key_b):
-        self.terminal_key_b = terminal_key_b
+    def __init__(self, udp_socket, dst):
         super().__init__(udp_socket, dst)
-        self.login(terminal_id_b, terminal_key_b, dst)
 
     def receive_routine(self):
         while True:
@@ -72,7 +70,10 @@ class CardTerminalClient(BankClient):
         self.send_to_server(int_to_bytes(CARD_PAYMENT_COMMAND), int_to_bytes(EXIT_COMMAND))
         exit(0)
 
-    def routine(self):
+    def routine(self, terminal_id_b, terminal_key_b):
+        if not self.login(terminal_id_b, terminal_key_b, dst):
+            print("login nicht erfolgreich")
+            exit(1)
         self.thread.start()
         self.print_commands(COMMANDS)
         while True:
@@ -94,4 +95,4 @@ serverPort = 20002
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-CardTerminalClient(UDPClientSocket, dst, terminal_id_b, terminal_key_b).routine()
+CardTerminalClient(UDPClientSocket, dst).routine(terminal_id_b, terminal_key_b)

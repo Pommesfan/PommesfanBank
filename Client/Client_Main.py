@@ -1,23 +1,15 @@
 import socket
-
 from Server.BankClient import BankClient
 from Utils import *
-import re
 
 TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]
 COMMANDS = ["Ausloggen", "Abfragen", "Überweisen", "Umsatzübersicht"]
 
 
 class CustomerClient(BankClient):
-    def __init__(self, server_ip, udp_socket, dst, username, password):
-        self.server_ip = server_ip
-        username_b = username.encode(UTF8STR)
-        password_b = password.encode(UTF8STR)
+    def __init__(self, server_ip, udp_socket, dst):
         super().__init__(udp_socket, dst)
-        bank_information = self.login(username_b, password_b, dst)
-        s = SliceIterator(bank_information)
-        self.currency = s.next_slice().decode(UTF8STR)
-        self.decimal_position = s.get_int()
+        self.server_ip = server_ip
 
     def receive_routine(self):
         while True:
@@ -39,33 +31,8 @@ class CustomerClient(BankClient):
 
     def format_amount(self, amount):
         amount = str(amount)
-        comma_position = len(amount) - self.decimal_position
-        return amount[:comma_position] + '.' + amount[comma_position:] + " " + self.currency
-
-    def check_input_amount(self, amount):
-        regex = "[0-9]{1,}(\.|\,)[0-9]{" + str(self.decimal_position) + "}"
-        if re.fullmatch(regex, amount):
-            comma_position = len(amount) - self.decimal_position
-            amount = amount[:comma_position - 1] + amount[comma_position:]
-            return int(amount)
-        else:
-            return -1
-
-    def tcp_on_demand(self, port):
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((self.server_ip, port))
-        return client
-
-    def receive_turnover(self, paket):
-        port = int_from_bytes(paket[0:4])
-        data = b''
-        client = self.tcp_on_demand(port)
-        length = int_from_bytes(client.recv(4))
-        while not length == 0:
-            data += self.session.aes_d.decrypt(client.recv(length))
-            length = int_from_bytes(client.recv(4))
-        client.close()
-        return data
+        comma_position = len(amount) - self.session.decimal_position
+        return amount[:comma_position] + '.' + amount[comma_position:] + " " + self.session.currency
 
     def print_turnover(self, turnover_list_b):
         s = SliceIterator(turnover_list_b)
@@ -80,7 +47,12 @@ class CustomerClient(BankClient):
                   "; Wert: " + self.format_amount(
                 amount) + "; Zeitpunkt: " + time_stamp + "; Verwendungszweck: " + reference)
 
-    def routine(self):
+    def routine(self, username, password):
+        username_b = username.encode(UTF8STR)
+        password_b = password.encode(UTF8STR)
+        if not self.login(username_b, password_b, dst):
+            print("login nicht erfolgreich")
+            exit(1)
         self.thread.start()
         self.print_commands(COMMANDS)
         while True:
@@ -125,4 +97,4 @@ password = input()
 dst = (serverIP, serverPort)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 # UDPClientSocket.bind((localIP, localPort))  # for docker
-CustomerClient(serverIP, UDPClientSocket, dst, username, password).routine()
+CustomerClient(serverIP, UDPClientSocket, dst).routine(username, password)

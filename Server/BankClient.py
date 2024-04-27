@@ -1,3 +1,5 @@
+import re
+import socket
 from threading import Thread
 
 from Utils import *
@@ -46,13 +48,44 @@ class BankClient:
 
         ack = int_from_bytes(self.udp_socket.recv(4))
         if ack != LOGIN_ACK:
-            exit(1)
-        self.session = _ClientSession(session_id, aes_e, aes_d)
-        return bank_information
+            return False
+
+        s = SliceIterator(bank_information)
+        currency = s.next_slice().decode(UTF8STR)
+        decimal_position = s.get_int()
+        self.session = _ClientSession(session_id, aes_e, aes_d, currency, decimal_position)
+        return True
+
+    def check_input_amount(self, amount):
+        regex = "[0-9]{1,}(\.|\,)[0-9]{" + str(self.session.decimal_position) + "}"
+        if re.fullmatch(regex, amount):
+            comma_position = len(amount) - self.session.decimal_position
+            amount = amount[:comma_position - 1] + amount[comma_position:]
+            return int(amount)
+        else:
+            return -1
+
+    def tcp_on_demand(self, port):
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((self.dst[0], port))
+        return client
+
+    def receive_turnover(self, paket):
+        port = int_from_bytes(paket[0:4])
+        data = b''
+        client = self.tcp_on_demand(port)
+        length = int_from_bytes(client.recv(4))
+        while not length == 0:
+            data += self.session.aes_d.decrypt(client.recv(length))
+            length = int_from_bytes(client.recv(4))
+        client.close()
+        return data
 
 
 class _ClientSession:
-    def __init__(self, session_id, aes_e, aes_d):
+    def __init__(self, session_id, aes_e, aes_d, currency, decimal_position):
         self.session_id = session_id
         self.aes_e = aes_e
         self.aes_d = aes_d
+        self.currency = currency
+        self.decimal_position = decimal_position
