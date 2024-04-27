@@ -32,8 +32,7 @@ class BankService:
         self._udp_socket.sendto(cipher_paket, session.ip_and_port)
         self._write_lock.release()
 
-    def start_login(self, paket, src, query_function, SessionClass):
-        s = SliceIterator(paket)
+    def start_login(self, s, src, query_function, SessionClass):
         username = s.next_slice().decode(UTF8STR)
         res = query_function(username)
         if res is None:
@@ -52,8 +51,7 @@ class BankService:
         self._udp_socket.sendto(paket, src)
         self._write_lock.release()
 
-    def complete_login(self, paket, src, query_function, message_function):
-        s = SliceIterator(paket)
+    def complete_login(self, s, src, query_function, message_function):
         session_id = s.get_slice(8)
         password_cipher = s.next_slice()
         session = self._ongoing_session_list.get_session_from_id(session_id, src)

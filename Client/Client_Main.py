@@ -1,5 +1,5 @@
 import socket
-from Server.BankClient import BankClient
+from Client.BankClient import BankClient
 from Utils import *
 
 TRANSFER_TYPES = ["Überweisung", "Kartenzahlung"]

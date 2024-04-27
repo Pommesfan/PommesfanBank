@@ -88,6 +88,9 @@ class SliceIterator:
         self.__counter = end
         return self.__data[start:end]
 
+    def get_last_slice(self):
+        return self.__data[self.__counter:]
+
     def get_int(self):
         return int_from_bytes(self.get_slice(4))
 

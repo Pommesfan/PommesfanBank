@@ -49,9 +49,8 @@ class CardTerminalService(BankService):
 
         self.complete_login(paket, src, query_function, message_function)
 
-    def __init_payment(self, session, paket):
+    def __init_payment(self, session, s):
         session.order_lock.acquire()
-        s = SliceIterator(paket)
         card_number = s.get_slice(16)
         card_key = s.get_slice(64)
         amount = s.get_int()
@@ -62,10 +61,10 @@ class CardTerminalService(BankService):
         self.answer_to_client(session, answer_paket)
         session.order_lock.release()
 
-    def __execute_payment(self, session, paket):
+    def __execute_payment(self, session, s):
         session.order_lock.acquire()
         order = session.current_order
-        transfer_code = paket[0:8].decode(UTF8STR)
+        transfer_code = s.get_slice(8).decode(UTF8STR)
 
         def on_not_execute(nack):
             answer_paket = int_to_bytes(nack) + transfer_code.encode(UTF8STR)
@@ -107,9 +106,9 @@ class CardTerminalService(BankService):
         self.answer_to_client(session, answer_paket)
         session.order_lock.release()
 
-    def __proof_payment(self, session, cipher_paket):
+    def __proof_payment(self, session, s):
         session.order_lock.acquire()
-        transfer_code = cipher_paket[0:8].decode(UTF8STR)
+        transfer_code = s.get_slice(8).decode(UTF8STR)
         current_order = session.current_order
         if current_order and session.current_order.transfer_code == transfer_code and current_order.last_nack != -1:
             self.answer_to_client(session, int_to_bytes(current_order.last_nack))
@@ -137,21 +136,23 @@ class CardTerminalService(BankService):
                 self._read_lock.acquire()
                 paket, src = self._udp_socket.recvfrom(1024)
                 self._read_lock.release()
-                command = int_from_bytes(paket[0:4])
+                s = SliceIterator(paket)
+                command = s.get_int()
                 if command == START_LOGIN:
-                    self.__start_login(paket[4:], src)
+                    self.__start_login(s, src)
                 elif command == COMPLETE_LOGIN:
-                    self.__complete_login(paket[4:], src)
+                    self.__complete_login(s, src)
                 elif command == CARD_PAYMENT_COMMAND:
-                    session: CardTerminalSession = self._session_list.get_session_from_id(paket[4:12], src)
-                    paket = session.aes_d.decrypt(paket[12:])
-                    payment_cmd = int_from_bytes(paket[0:4])
+                    session: CardTerminalSession = self._session_list.get_session_from_id(s.get_slice(8), src)
+                    paket = session.aes_d.decrypt(s.get_last_slice())
+                    s = SliceIterator(paket)
+                    payment_cmd = s.get_int()
                     if payment_cmd == INIT_CARD_PAYMENT_COMMAND:
-                        self.__init_payment(session, paket[4:])
+                        self.__init_payment(session, s)
                     elif payment_cmd == EXECUTE_CARD_PAYMENT_COMMAND:
-                        self.__execute_payment(session, paket[4:])
+                        self.__execute_payment(session, s)
                     elif payment_cmd == PROOF_CARD_PAYMENT_COMMAND:
-                        self.__proof_payment(session, paket[4:])
+                        self.__proof_payment(session, s)
                     elif payment_cmd == EXIT_COMMAND:
                         self.logout(session)
             except:

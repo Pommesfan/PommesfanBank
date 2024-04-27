@@ -1,5 +1,5 @@
 import socket
-from Server.BankClient import BankClient
+from Client.BankClient import BankClient
 from Utils import *
 
 COMMANDS = ["Zahlung vorbereiten", "Zahlung ausführen", "Zahlung nachprüfen", "Logout"]

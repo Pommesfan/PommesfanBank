@@ -26,7 +26,7 @@ class CustomerService(BankService):
         self._db_interface.release_lock()
         return answer
 
-    def __start_login(self, paket, src):
+    def __start_login(self, s, src):
         def query_function(username):
             res = self.get_customer_from_username(username)
             if res is None:
@@ -37,9 +37,9 @@ class CustomerService(BankService):
                 customer_password_b = res[3].encode(UTF8STR)
                 return customer_id, customer_password_b
 
-        super().start_login(paket, src, query_function, Session)
+        super().start_login(s, src, query_function, Session)
 
-    def __complete_login(self, paket, src):
+    def __complete_login(self, s, src):
         def query_function(customer_id):
             res = self._db_interface.query_customer(customer_id, "customer_id")
             customer_name = res[1]
@@ -54,14 +54,14 @@ class CustomerService(BankService):
                 msg += "' nicht erfolgreich"
             print(msg)
 
-        super().complete_login(paket, src, query_function, message_function)
+        super().complete_login(s, src, query_function, message_function)
 
-    def transfer_from_session(self, session, slice_iterator):
-        receiver_account_len = int_from_bytes(slice_iterator.get_slice(4))
-        receiver_account_id = slice_iterator.get_slice(receiver_account_len).decode(UTF8STR)
-        amount = int_from_bytes(slice_iterator.get_slice(4))
-        reference_length = int_from_bytes(slice_iterator.get_slice(4))
-        reference = slice_iterator.get_slice(reference_length).decode(UTF8STR)
+    def transfer_from_session(self, session, s):
+        receiver_account_len = int_from_bytes(s.get_slice(4))
+        receiver_account_id = s.get_slice(receiver_account_len).decode(UTF8STR)
+        amount = int_from_bytes(s.get_slice(4))
+        reference_length = int_from_bytes(s.get_slice(4))
+        reference = s.get_slice(reference_length).decode(UTF8STR)
         transmitter_account_id = self._db_interface.query_account_to_customer(session.user_id, "customer_id")[0]
 
         if '@' in receiver_account_id:
@@ -136,27 +136,28 @@ class CustomerService(BankService):
             self._read_lock.acquire()
             paket, src = self._udp_socket.recvfrom(1024)
             self._read_lock.release()
+            s = SliceIterator(paket)
 
             try:
-                command = int_from_bytes(paket[0:4])
+                command = s.get_int()
                 if command == START_LOGIN:
-                    self.__start_login(paket[4:], src)
+                    self.__start_login(s, src)
                 elif command == COMPLETE_LOGIN:
-                    self.__complete_login(paket[4:], src)
+                    self.__complete_login(s, src)
                 elif command == BANKING_COMMAND:
-                    session = self._session_list.get_session_from_id(paket[4:12], src)
+                    session = self._session_list.get_session_from_id(s.get_slice(8), src)
                     # session was removed due to logout
                     if session is None:
                         continue
                     customer_id = session.user_id
-                    paket = session.aes_d.decrypt(paket[12:])
-                    banking_command = int_from_bytes(paket[0:4])
+                    paket = session.aes_d.decrypt(s.get_last_slice())
+                    s = SliceIterator(paket)
+                    banking_command = s.get_int()
                     if banking_command == EXIT_COMMAND:
                         self.user_exit(session)
                     elif banking_command == SHOW_BALANCE_COMMAND:
                         self.show_balance(session)
                     elif banking_command == TRANSFER_COMMAND:
-                        s = SliceIterator(paket, counter=4)
                         self.transfer_from_session(session, s)
                     elif banking_command == SEE_TURNOVER:
                         self.resume_turnover(customer_id, session)
