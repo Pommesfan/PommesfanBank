@@ -44,10 +44,10 @@ class CustomerService(BankService):
             res = self._db_interface.query_customer(customer_id, "customer_id")
             customer_name = res[1]
             customer_password_b = res[3].encode(UTF8STR)
-            return customer_name, customer_password_b
+            return res, customer_name, customer_password_b
 
-        def message_function(user, success):
-            msg = "Login Nutzer: '" + user + "' - '" + self._db_interface.query_customer(user, "customer_id")[1]
+        def message_function(user, query_res, success):
+            msg = "Login Nutzer: '" + user + "' - '" + query_res[1]
             if success:
                 msg += "' erfolgreich"
             else:

@@ -60,12 +60,12 @@ class BankService:
         len_password = int_from_bytes(password_with_len[0:4])
         password_b = password_with_len[4:4 + len_password]
         self._ongoing_session_list.remove_session(session_id)
-        name, password_b_client = query_function(session.user_id)
+        query_res, name, password_b_client = query_function(session.user_id)
         if password_b == password_b_client:
             self._session_list.add(session)
-            message_function(session.user_id, True)
+            message_function(session.user_id, query_res, True)
             self._write_lock.acquire()
             self._udp_socket.sendto(int_to_bytes(LOGIN_ACK), src)
             self._write_lock.release()
         else:
-            message_function(session.user_id, False)
+            message_function(session.user_id,query_res, False)

@@ -36,9 +36,9 @@ class CardTerminalService(BankService):
         def query_function(terminal_id):
             res = self._db_interface.query_terminal(terminal_id)
             terminal_key_b = res[1].encode(UTF8STR)
-            return terminal_id, terminal_key_b
+            return res, terminal_id, terminal_key_b
 
-        def message_function(user_id, success):
+        def message_function(user_id, query_res, success):
             msg = "Login Terminal: '" + user_id
             if success:
                 msg += "' erfolgreich"
