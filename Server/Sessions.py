@@ -17,6 +17,7 @@ class CardTerminalSession(Session):
     def __init__(self, session_id, session_key, customer_id, ip_and_port, aes_e, aes_d):
         super().__init__(session_id, session_key, customer_id, ip_and_port, aes_e, aes_d)
         self.current_order = None
+        self.order_lock = Lock()
 
 
 class SessionList:

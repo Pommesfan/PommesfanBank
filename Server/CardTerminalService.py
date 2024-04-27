@@ -11,6 +11,7 @@ class PaymentOrder:
         self.amount = amount
         self.reference = reference
         self.transfer_code = transfer_code
+        self.last_nack = -1
 
 
 class CardTerminalService(BankService):
@@ -49,6 +50,7 @@ class CardTerminalService(BankService):
         self.complete_login(paket, src, query_function, message_function)
 
     def __init_payment(self, session, paket):
+        session.order_lock.acquire()
         s = SliceIterator(paket)
         card_number = s.get_slice(16)
         card_key = s.get_slice(64)
@@ -58,14 +60,20 @@ class CardTerminalService(BankService):
         session.current_order = PaymentOrder(card_number, card_key, amount, reference, transfer_code)
         answer_paket = int_to_bytes(PAYMENT_ORDER_ACK) + transfer_code.encode(UTF8STR)
         self.answer_to_client(session, answer_paket)
+        session.order_lock.release()
 
     def __execute_payment(self, session, paket):
+        session.order_lock.acquire()
         order = session.current_order
         transfer_code = paket[0:8].decode(UTF8STR)
 
-        if not order or order.transfer_code != transfer_code:
-            answer_paket = int_to_bytes(PAYMENT_EXECUTE_NACK_TRANSFER_CODE) + transfer_code.encode(UTF8STR)
+        def on_not_execute(nack):
+            answer_paket = int_to_bytes(nack) + transfer_code.encode(UTF8STR)
             self.answer_to_client(session, answer_paket)
+            session.order_lock.release()
+
+        if not order or order.transfer_code != transfer_code:
+            on_not_execute(PAYMENT_EXECUTE_NACK_TRANSFER_CODE)
             print("Transfer code nicht erfasst")
             return
 
@@ -74,8 +82,8 @@ class CardTerminalService(BankService):
 
         res = self._db_interface.query_account_to_card(order.card_number.decode(UTF8STR))
         if not res:
-            answer_paket = int_to_bytes(PAYMENT_EXECUTE_NACK_CARDNUMBER) + transfer_code.encode(UTF8STR)
-            self.answer_to_client(session, answer_paket)
+            order.last_nack = PAYMENT_EXECUTE_NACK_CARDNUMBER
+            on_not_execute(PAYMENT_EXECUTE_NACK_CARDNUMBER)
             print("Karte nicht registriert")
             return
 
@@ -83,8 +91,8 @@ class CardTerminalService(BankService):
         card_key_from_db = res[1]
 
         if card_key_from_db != order.card_key:
-            answer_paket = int_to_bytes(PAYMENT_EXECUTE_NACK_CARDKEY) + transfer_code.encode(UTF8STR)
-            self.answer_to_client(session, answer_paket)
+            order.last_nack = PAYMENT_EXECUTE_NACK_CARDKEY
+            on_not_execute(PAYMENT_EXECUTE_NACK_CARDKEY)
             print("Kartenzahlung nicht erfolgreich")
             return
 
@@ -97,18 +105,25 @@ class CardTerminalService(BankService):
         session.current_order = None
         answer_paket = int_to_bytes(PAYMENT_EXECUTE_ACK) + order.transfer_code.encode(UTF8STR)
         self.answer_to_client(session, answer_paket)
+        session.order_lock.release()
 
     def __proof_payment(self, session, cipher_paket):
+        session.order_lock.acquire()
         transfer_code = cipher_paket[0:8].decode(UTF8STR)
-        self._db_interface.acquire_lock()
-        res = self._db_interface.query_card_payment(transfer_code)
-        self._db_interface.release_lock()
-
-        if res:
-            answer_paket = int_to_bytes(PAYMENT_PROOF_ACK) + transfer_code.encode(UTF8STR)
+        current_order = session.current_order
+        if current_order and session.current_order.transfer_code == transfer_code and current_order.last_nack != -1:
+            self.answer_to_client(session, int_to_bytes(current_order.last_nack))
         else:
-            answer_paket = int_to_bytes(PAYMENT_PROOF_NACK)
-        self.answer_to_client(session, answer_paket)
+            self._db_interface.acquire_lock()
+            res = self._db_interface.query_card_payment(transfer_code)
+            self._db_interface.release_lock()
+
+            if res:
+                answer_paket = int_to_bytes(PAYMENT_PROOF_ACK) + transfer_code.encode(UTF8STR)
+            else:
+                answer_paket = int_to_bytes(PAYMENT_PROOF_NACK)
+            self.answer_to_client(session, answer_paket)
+        session.order_lock.release()
 
     def logout(self, session):
         if self._session_list.remove_session(session.session_id) == -1:
