@@ -15,9 +15,10 @@ class CardTerminalClient(BankClient):
             if src != self.dst:
                 return
             paket = self.session.aes_d.decrypt(paket)
-            cmd = int_from_bytes(paket[0:4])
+            s = SliceIterator(paket)
+            cmd = s.get_int()
             if cmd == PAYMENT_ORDER_ACK:
-                print("Transaktion vorbereitet: transfer_code: " + paket[4:12].decode(UTF8STR))
+                print("Transaktion vorbereitet: transfer_code: " + s.get_slice(8).decode(UTF8STR))
             elif cmd == PAYMENT_EXECUTE_ACK:
                 print("erfolgreich ausgeführt")
             elif cmd == PAYMENT_EXECUTE_NACK_TRANSFER_CODE:

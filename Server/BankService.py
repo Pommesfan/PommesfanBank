@@ -55,9 +55,9 @@ class BankService:
         session_id = s.get_slice(8)
         password_cipher = s.next_slice()
         session = self._ongoing_session_list.get_session_from_id(session_id, src)
-        password_with_len = session.aes_d.decrypt(password_cipher)
-        len_password = int_from_bytes(password_with_len[0:4])
-        password_b = password_with_len[4:4 + len_password]
+        paket = session.aes_d.decrypt(password_cipher)
+        s = SliceIterator(paket)
+        password_b = s.next_slice()
         self._ongoing_session_list.remove_session(session_id)
         query_res, name, password_b_client = query_function(session.user_id)
         if password_b == password_b_client:

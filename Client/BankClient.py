@@ -70,8 +70,7 @@ class BankClient:
         client.connect((self.dst[0], port))
         return client
 
-    def receive_turnover(self, paket):
-        port = int_from_bytes(paket[0:4])
+    def receive_turnover(self, port):
         data = b''
         client = self.tcp_on_demand(port)
         length = int_from_bytes(client.recv(4))

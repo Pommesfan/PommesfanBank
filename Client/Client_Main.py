@@ -17,15 +17,17 @@ class CustomerClient(BankClient):
             if src != self.dst:
                 return
             paket = self.session.aes_d.decrypt(paket)
-            cmd = int_from_bytes(paket[0:4])
+            s = SliceIterator(paket)
+            cmd = s.get_int()
 
             if cmd == SHOW_BALANCE_RESPONSE:
-                amount_b = paket[4:8]
-                print("Kontostand: " + self.format_amount(int_from_bytes(amount_b)))
+                amount = s.get_int()
+                print("Kontostand: " + self.format_amount(amount))
             elif cmd == TRANSFER_ACK:
                 print("Überweisung erfolgreich")
             elif cmd == SEE_TURNOVER_RESPONSE:
-                turnover_list_b = self.receive_turnover(paket[4:])
+                port = s.get_int()
+                turnover_list_b = self.receive_turnover(port)
                 self.print_turnover(turnover_list_b)
             self.print_commands(COMMANDS)
 
