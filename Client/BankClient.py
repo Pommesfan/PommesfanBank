@@ -36,20 +36,21 @@ class BankClient:
         # receive start login response
         paket = self.udp_socket.recv(96)
         s = SliceIterator(paket)
-        bank_information = s.next_slice()
+
         session_id = s.get_slice(8)
         session_key = aes_from_password_d.decrypt(s.get_slice(32))
         aes_e, aes_d = get_aes(session_key)
 
         # complete login
-        password_cipher = encrypt_uneven_block(int_to_bytes(len(password_b)) + password_b, aes_e)
-        paket = int_to_bytes(COMPLETE_LOGIN) + session_id + int_to_bytes(len(password_cipher)) + password_cipher
+        password_hash = aes_e.encrypt(password_hash)
+        paket = int_to_bytes(COMPLETE_LOGIN) + session_id + password_hash
         self.udp_socket.sendto(paket, dst)
 
         ack = int_from_bytes(self.udp_socket.recv(4))
         if ack != LOGIN_ACK:
             return False
 
+        bank_information = s.next_slice()
         s = SliceIterator(bank_information)
         currency = s.next_slice().decode(UTF8STR)
         decimal_position = s.get_int()

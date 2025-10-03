@@ -46,21 +46,19 @@ class BankService:
 
         bank_information_b = int_to_bytes(len(self._CURRENCY_B)) + self._CURRENCY_B + self._DECIMAL_PLACE_B
         len_bank_information_b = int_to_bytes(len(bank_information_b))
-        paket = len_bank_information_b + bank_information_b + session_id + aes_from_password_e.encrypt(session_key)
+        paket = session_id + aes_from_password_e.encrypt(session_key) + len_bank_information_b + bank_information_b
         self._write_lock.acquire()
         self._udp_socket.sendto(paket, src)
         self._write_lock.release()
 
     def complete_login(self, s, src, query_function, message_function):
         session_id = s.get_slice(8)
-        password_cipher = s.next_slice()
+        received_password_hash = s.get_slice(32)
         session = self._ongoing_session_list.get_session_from_id(session_id, src)
-        paket = session.aes_d.decrypt(password_cipher)
-        s = SliceIterator(paket)
-        password_b = s.next_slice()
+        received_password_hash = session.aes_d.decrypt(received_password_hash)
         self._ongoing_session_list.remove_session(session_id)
         query_res, name, password_b_client = query_function(session.user_id)
-        if password_b == password_b_client:
+        if received_password_hash == hashcode(password_b_client):
             self._session_list.add(session)
             message_function(session.user_id, query_res, True)
             self._write_lock.acquire()
