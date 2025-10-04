@@ -45,8 +45,7 @@ class BankService:
         self._ongoing_session_list.add(SessionClass(session_id, session_key, customer_id, src, aes_e, aes_d))
 
         bank_information_b = int_to_bytes(len(self._CURRENCY_B)) + self._CURRENCY_B + self._DECIMAL_PLACE_B
-        len_bank_information_b = int_to_bytes(len(bank_information_b))
-        paket = session_id + aes_from_password_e.encrypt(session_key) + len_bank_information_b + bank_information_b
+        paket = session_id + aes_from_password_e.encrypt(session_key) + bank_information_b
         self._write_lock.acquire()
         self._udp_socket.sendto(paket, src)
         self._write_lock.release()

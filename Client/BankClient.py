@@ -50,8 +50,6 @@ class BankClient:
         if ack != LOGIN_ACK:
             return False
 
-        bank_information = s.next_slice()
-        s = SliceIterator(bank_information)
         currency = s.next_slice().decode(UTF8STR)
         decimal_position = s.get_int()
         self.session = _ClientSession(session_id, aes_e, aes_d, currency, decimal_position)
