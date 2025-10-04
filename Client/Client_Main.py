@@ -88,15 +88,16 @@ class CustomerClient(BankClient):
                 self.send_to_server(banking_command_b, paket)
 
 
-serverIP = "127.0.0.1"
-serverPort = 20001
-localIP = "127.0.0.2"
-localPort = 20002
-print("Kundennummer oder E-Mail-Adresse eingeben:")
-username = input()
-print("Passwort eingeben:")
-password = input()
-dst = (serverIP, serverPort)
-UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-# UDPClientSocket.bind((localIP, localPort))  # for docker
-CustomerClient(serverIP, UDPClientSocket, dst).routine(username, password)
+if __name__ == '__main__':
+    serverIP = "127.0.0.1"
+    serverPort = 20001
+    localIP = "127.0.0.2"
+    localPort = 20002
+    print("Kundennummer oder E-Mail-Adresse eingeben:")
+    username = input()
+    print("Passwort eingeben:")
+    password = input()
+    dst = (serverIP, serverPort)
+    UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    # UDPClientSocket.bind((localIP, localPort))  # for docker
+    CustomerClient(serverIP, UDPClientSocket, dst).routine(username, password)
